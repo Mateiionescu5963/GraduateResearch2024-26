@@ -8,8 +8,10 @@ import os
 import warnings
 
 if __name__ == "__main__":
-	data_path = '../../../data/DikeData/files/'
-	label_path = '../../../data/DikeData/labels/data.csv'
+	warnings.filterwarnings("ignore")
+
+	data_path = '../../../MicrosoftData2015/train/'
+	label_path = '../../data/MicrosoftData2015/trainLabels_mod.csv'
 	
 	# -- 
 	model_path = 'malconv_model_mlionestest.pth'
@@ -60,22 +62,21 @@ if __name__ == "__main__":
 	# --------------
 	
 	if torch.cuda.is_available():
-	    print("CUDA is available. Training on GPU.")
+		print("CUDA is available. Training on GPU.")
 	else:
-	    print("CUDA is not available. Training on CPU.")
+		print("CUDA is not available. Training on CPU.")
 
 	if os.path.exists(model_path) and os.path.exists(optimizer_path):
-	    print("Loading saved model and optimizer state...")
-	    model.load_state_dict(torch.load(model_path))
-	    optimizer.load_state_dict(torch.load(optimizer_path))
+		print("Loading saved model and optimizer state...")
+		model.load_state_dict(torch.load(model_path))
+		optimizer.load_state_dict(torch.load(optimizer_path))
 	else:
-	    print("No saved model found, training from scratch...")
-	    
+		print("No saved model found, training from scratch...")
+
 	# ---------------
-	    
+
 	try:
-		with warnings.catch_warnings(action="ignore"):
-			best_model = train_model(model, criterion, optimizer, device, epochs, train_loader, valid_loader)
+		best_model = train_model(model, criterion, optimizer, device, epochs, train_loader, valid_loader)
 	except KeyboardInterrupt:
 		print("interrupted")
 	finally:

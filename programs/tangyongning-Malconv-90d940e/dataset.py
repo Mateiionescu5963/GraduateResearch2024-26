@@ -16,12 +16,15 @@ class ExeDataset(Dataset):
 
     def __getitem__(self, idx):
         try:
+            # attempt to open file without file extension
             with open(self.data_path + self.fp_list[idx], 'rb') as f:
+                # numpy buffer read
                 tmp = np.frombuffer(f.read(self.first_n_byte), dtype=np.uint8) + 1
                 if len(tmp) < self.first_n_byte:
                     tmp = np.pad(tmp, (0, self.first_n_byte - len(tmp)), 'constant')
         except:
             try:
+                # as above but using specific extensions when file is not found
                 with open(self.data_path + self.fp_list[idx] + ".exe", 'rb') as f:
                     tmp = np.frombuffer(f.read(self.first_n_byte), dtype=np.uint8) + 1
                     if len(tmp) < self.first_n_byte:
@@ -34,7 +37,7 @@ class ExeDataset(Dataset):
 
         return tmp, np.array([self.label_list[idx]], dtype=np.float32)
 
-
+# initialize train/test split
 def init_loader(dataset, batch_size=8):
     train_size = int(0.8 * len(dataset))
     valid_size = len(dataset) - train_size

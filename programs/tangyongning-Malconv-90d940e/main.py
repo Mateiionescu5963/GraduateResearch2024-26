@@ -53,6 +53,7 @@ if __name__ == "__main__":
 	model = MalConv(input_length=first_n_byte, window_size=window_size)
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 	model = model.to(device)
+	
 	criterion = torch.nn.BCEWithLogitsLoss()
 	optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-4)
 

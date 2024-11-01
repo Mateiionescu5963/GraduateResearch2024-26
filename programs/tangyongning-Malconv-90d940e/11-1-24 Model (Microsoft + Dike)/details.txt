@@ -1,0 +1,8 @@
+Epoch accuracy is 0.975, precision is 0.916, Recall is 0.916, F1 is 0.916. for Dike Train/test
+
+Epoch accuracy is 1.000, precision is 1.000, Recall is 1.000, F1 is 1.000. for Microsoft train/test
+
+Epoch accuracy is 0.904, precision is 0.904, Recall is 0.904, F1 is 0.904. for Dike Re-testing
+
+
+Uses both the Dike and Microsoft2015 training and testing

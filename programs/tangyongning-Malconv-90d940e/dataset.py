@@ -51,7 +51,6 @@ class ExeDataset(Dataset):
 
 		return tmp, np.array([self.label_list[idx]], dtype=np.float32)
 
-# initialize train/test split
 def init_loader(dataset, batch_size=8):
 	train_size = int(0.8 * len(dataset))
 	valid_size = len(dataset) - train_size

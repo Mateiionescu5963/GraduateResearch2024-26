@@ -49,16 +49,21 @@ if __name__ == "__main__":
 	
 	# --------------
 
+	# dataset files as dataset.py objects
 	train_dataset = ExeDataset(list(tr_table.index), data_path, list(tr_table.ground_truth), first_n_byte)
 	valid_dataset = ExeDataset(list(val_table.index), data_path, list(val_table.ground_truth), first_n_byte)
 
+	# datasets as pytorch utils objects
 	train_loader, valid_loader = init_loader(train_dataset, batch_size)
 	valid_loader = init_loader(valid_dataset, batch_size)[1]
 
+	# load model format
 	model = MalConv(input_length=first_n_byte, window_size=window_size)
+	# set device to cuda GPU if available
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 	model = model.to(device)
-	
+
+	# set pytorch loss and optimization parameters
 	criterion = torch.nn.BCEWithLogitsLoss()
 	optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-4)
 

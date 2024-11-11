@@ -30,7 +30,7 @@ def eval_model(model, dataloader, device):
         
     return accuracy_total, precision_total, recall_total, f1_score_total
 
-def train_model(model, criterion, optimizer, device, epochs, train_loader, valid_loader):
+def train_model(model, criterion, optimizer, device, epochs, train_loader, valid_loader, log = None):
     print('Start training...')
 
     scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=3)
@@ -74,7 +74,9 @@ def train_model(model, criterion, optimizer, device, epochs, train_loader, valid
 
     acc, pre, rec, f1 = eval_model(model, valid_loader, device)
     print('Epoch accuracy is {:.3f}, precision is {:.3f}, Recall is {:.3f}, F1 is {:.3f}.'.format(acc, pre, rec, f1))
-    
+    if log:
+        log.write('Epoch accuracy is {:.3f}, precision is {:.3f}, Recall is {:.3f}, F1 is {:.3f}.'.format(acc, pre, rec, f1))
+
     if f1 >= best_f1:
         best_f1 = f1
         best_model = model

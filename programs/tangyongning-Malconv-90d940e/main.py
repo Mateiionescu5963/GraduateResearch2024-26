@@ -5,18 +5,13 @@ from model import MalConv
 from train import train_model
 from sklearn.model_selection import train_test_split as spl
 import os
+import sys
 import warnings
 
 if __name__ == "__main__":
 	warnings.filterwarnings("ignore")
 
-	#data_path = '../../../MicrosoftData2015/train/'
-	#label_path = '../../data/MicrosoftData2015/trainLabels_mod.csv'
-
-	data_path = '../../data/DikeData/files/'
-	label_path = '../../data/DikeData/labels/data.csv'
-
-	# -- 
+	# --
 	model_path = 'malconv_model_mlionestest.pth'
 	optimizer_path = 'optimizer_state_mlionestest.pth'
 	# -- 
@@ -27,7 +22,31 @@ if __name__ == "__main__":
 	mal_benign_ratio = 0.5 #1 == all malware; 0 == all benign
 	batch_size = 1
 	epochs = 10
+
+	dataset = 1
+	log = None
+
+	if len(sys.argv) == 6:
+		window_size = int(sys.argv[1])
+		stride = int(sys.argv[2])
+		test_set_size = float(sys.argv[3])
+		mal_benign_ratio = float(sys.argv[4])
+		dataset = int(sys.argv[5])
+
+		pth_start = './11-11-24_GRIDSEARCH/'
+		model_path = pth_start+'malconv_model_'+str(sys.argv)+'_mlionestest.pth'
+		optimizer_path = pth_start+'optimizer_state_'+str(sys.argv)+'_mlionestest.pth'
+		log = open(pth_start+str(sys.argv)+"_LOG.txt", "w")
 	
+	# -----------------
+
+	data_path = '../../../MicrosoftData2015/train/'
+	label_path = '../../data/MicrosoftData2015/trainLabels_mod.csv'
+
+	if dataset == 1:
+		data_path = '../../data/DikeData/files/'
+		label_path = '../../data/DikeData/labels/data.csv'
+
 	# -----------------
 
 	#assemble data labels as pandas table
@@ -91,7 +110,7 @@ if __name__ == "__main__":
 	valid_loader = init_loader(valid_dataset, batch_size)[1]
 
 	# load model format
-	model = MalConv(input_length=first_n_byte, window_size=window_size)
+	model = MalConv(input_length=first_n_byte, window_size=window_size, stride = stride)
 	# set device to cuda GPU if available
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 	model = model.to(device)
@@ -117,10 +136,13 @@ if __name__ == "__main__":
 	# ---------------
 
 	try:
-		best_model = train_model(model, criterion, optimizer, device, epochs, train_loader, valid_loader)
+		best_model = train_model(model, criterion, optimizer, device, epochs, train_loader, valid_loader, log = log)
 	except KeyboardInterrupt:
 		print("interrupted")
 	finally:
+		if log:
+			log.close()
+
 		torch.save(model.state_dict(), model_path)
 		torch.save(optimizer.state_dict(), optimizer_path)
 

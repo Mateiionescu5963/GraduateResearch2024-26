@@ -23,7 +23,8 @@ if __name__ == "__main__":
 	first_n_byte = 2000000
 	window_size = 500
 	stride = window_size
-	test_set_size = 0.999
+	test_set_size = 0.25
+	mal_benign_ratio = 0.5 #1 == all malware; 0 == all benign
 	batch_size = 1
 	epochs = 10
 	
@@ -31,7 +32,39 @@ if __name__ == "__main__":
 
 	#assemble data labels as pandas table
 	label_table = pd.read_csv(label_path, header = None, index_col = 0).rename(columns={1: 'ground_truth'}).groupby(level=0).last()
-	
+
+	#reformat table based on malware-benign ratio:
+	#ASSERT(type 0 == benign and type 1 == malware)
+	if 1 > mal_benign_ratio > 0:
+		mal = label_table[label_table["ground_truth"] == 1]
+		ben = label_table[label_table["ground_truth"] == 0]
+
+		c_mal = len(mal)
+		c_ben = len(ben)
+		print("Available Malware in dataset: "+str(c_mal)+"\n"
+			  +"Available Benign in dataset: "+str(c_ben)+"\n")
+
+		#determine set size by using 100% of the smallest category
+		if c_mal > c_ben:
+			c_mal = (c_ben / (1 - mal_benign_ratio)) * mal_benign_ratio
+		elif c_mal < c_ben:
+			c_ben = (c_mal / mal_benign_ratio) * (1 - mal_benign_ratio)
+		else: #if the categories are of equal size, use the set whose final proportion is larger
+			if mal_benign_ratio > 0.5:
+				c_ben = (c_mal / mal_benign_ratio) * (1 - mal_benign_ratio)
+			elif mal_benign_ratio < 0.5:
+				c_mal = (c_ben / (1 - mal_benign_ratio)) * mal_benign_ratio
+
+		#take random samples of the appropriate sizes from each category and concatenate them
+		label_table = pd.concat([mal.sample(int(c_mal)), ben.sample(int(c_ben))])
+	elif mal_benign_ratio == 1:
+		label_table = label_table[label_table["ground_truth"] == 1]
+	elif mal_benign_ratio == 0:
+		label_table = label_table[label_table["ground_truth"] == 0]
+	else:
+		print("Error in malware-benign ratio parameter: proceeding with train/test using dataset standard")
+
+
 	#split data 
 	tr_table, val_table = spl(label_table, test_size = test_set_size)
 	
@@ -39,13 +72,13 @@ if __name__ == "__main__":
 
 	print('Training Set:')
 	print('\tTotal', len(tr_table), 'files')
-	#print('\tMalware Count :', tr_table['ground_truth'].value_counts().iloc[1])
-	#print('\tGoodware Count:', tr_table['ground_truth'].value_counts().iloc[0])
+	print('\tMalware Count :', len(tr_table[tr_table['ground_truth'] == 1]))
+	print('\tGoodware Count:', len(tr_table[tr_table['ground_truth'] == 0]))
 
 	print('Validation Set:')
 	print('\tTotal', len(val_table), 'files')
-	#print('\tMalware Count :', val_table['ground_truth'].value_counts().iloc[1])
-	#print('\tGoodware Count:', val_table['ground_truth'].value_counts().iloc[0])
+	print('\tMalware Count :', len(val_table[val_table['ground_truth'] == 1]))
+	print('\tGoodware Count:', len(val_table[val_table['ground_truth'] == 0]))
 	
 	# --------------
 

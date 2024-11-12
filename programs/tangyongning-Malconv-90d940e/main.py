@@ -58,6 +58,7 @@ if __name__ == "__main__":
 		mal = label_table[label_table["ground_truth"] == 1]
 		ben = label_table[label_table["ground_truth"] == 0]
 
+
 		c_mal = len(mal)
 		c_ben = len(ben)
 		print("Available Malware in dataset: "+str(c_mal)+"\n"
@@ -75,7 +76,8 @@ if __name__ == "__main__":
 				c_mal = (c_ben / (1 - mal_benign_ratio)) * mal_benign_ratio
 
 		#take random samples of the appropriate sizes from each category and concatenate them
-		label_table = pd.concat([mal.sample(int(c_mal)), ben.sample(int(c_ben))])
+		if not (c_mal == 0 or c_ben == 0):
+			label_table = pd.concat([mal.sample(int(c_mal)), ben.sample(int(c_ben))])
 	elif mal_benign_ratio == 1:
 		label_table = label_table[label_table["ground_truth"] == 1]
 	elif mal_benign_ratio == 0:

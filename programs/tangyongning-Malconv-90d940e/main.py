@@ -40,12 +40,13 @@ if __name__ == "__main__":
 	
 	# -----------------
 
-	data_path = '../../../MicrosoftData2015/train/'
-	label_path = '../../data/MicrosoftData2015/trainLabels_mod.csv'
+	data_path = '../../data/DikeData/files/'
+	label_path = '../../data/DikeData/labels/data.csv'
 
 	if dataset == 1:
-		data_path = '../../data/DikeData/files/'
-		label_path = '../../data/DikeData/labels/data.csv'
+		data_path = '../../../MicrosoftData2015/train/'
+		label_path = '../../data/MicrosoftData2015/trainLabels_mod.csv'
+
 
 	# -----------------
 

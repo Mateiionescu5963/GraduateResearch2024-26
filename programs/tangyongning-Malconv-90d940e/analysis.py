@@ -57,12 +57,13 @@ if __name__ == "__main__":
         # TODO add case later on in research to determine for sure
 
         # sift through data by altering different filters below:
-        #df = df[df["mal-benign-ratio"] == 0.1]
+        df = df[df["mal-benign-ratio"] == 0.5]
         df = df[df["F1"] > 0.1]
         df = df[df["acc"] > df["mal-benign-ratio"]]
+        #df = df[df["window"] > 500]
 
         #sort by Accuracy and F1 and display
-        df = df.sort_values(by = ["F1", "acc"], ascending = False)
+        df = df.sort_values(by = ["acc", "F1"], ascending = False)
         print(df.head(len(df)))
     else:
         try:

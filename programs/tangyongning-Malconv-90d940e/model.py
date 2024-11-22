@@ -2,10 +2,10 @@ import torch
 import torch.nn as nn
 
 class MalConv(nn.Module):
-    def __init__(self, input_length=2000000, window_size=500, stride = 500):
+    def __init__(self, input_length=2000000, window_size=500, stride = 500, embed = 8):
         super(MalConv, self).__init__()
 
-        self.embed = nn.Embedding(257, 8, padding_idx=0)
+        self.embed = nn.Embedding(257, embed, padding_idx=0)
         self.conv_1 = nn.Conv1d(4, 128, window_size, stride = stride, bias = True)
         self.conv_2 = nn.Conv1d(4, 128, window_size, stride = stride, bias = True)
         self.pooling = nn.MaxPool1d(int(input_length / window_size))

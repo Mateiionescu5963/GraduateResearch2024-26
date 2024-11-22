@@ -20,10 +20,11 @@ if __name__ == "__main__":
 	stride = window_size
 	test_set_size = 0.25
 	mal_benign_ratio = 0.5 #1 == all malware; 0 == all benign
+	embed = 8
 	batch_size = 1
 	epochs = 10
 
-	dataset = 1
+	#dataset = 1
 	log = None
 
 	if len(sys.argv) == 6:
@@ -31,22 +32,18 @@ if __name__ == "__main__":
 		stride = int(sys.argv[2])
 		test_set_size = float(sys.argv[3])
 		mal_benign_ratio = float(sys.argv[4])
-		dataset = int(sys.argv[5])
+		embed = int(sys.argv[5])
 
-		pth_start = './11-11-24_GRIDSEARCH/'
+
+		pth_start = './TGB_24_grid/'
 		model_path = pth_start+'malconv_model_'+str(sys.argv)+'_mlionestest.pth'
 		optimizer_path = pth_start+'optimizer_state_'+str(sys.argv)+'_mlionestest.pth'
 		log = open(pth_start+str(sys.argv)+"_LOG.txt", "w")
 	
 	# -----------------
 
-	data_path = '../../data/DikeData/files/'
-	label_path = '../../data/DikeData/labels/data.csv'
-
-	if dataset == 1:
-		data_path = '../../../MicrosoftData2015/train/'
-		label_path = '../../data/MicrosoftData2015/trainLabels_mod.csv'
-
+	data_path = '../../../alldata_files/'
+	label_path = '../../data/data.csv'
 
 	# -----------------
 
@@ -113,7 +110,7 @@ if __name__ == "__main__":
 	valid_loader = init_loader(valid_dataset, batch_size)[1]
 
 	# load model format
-	model = MalConv(input_length=first_n_byte, window_size=window_size, stride = stride)
+	model = MalConv(input_length=first_n_byte, window_size=window_size, stride = stride, embed = embed)
 	# set device to cuda GPU if available
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 	model = model.to(device)

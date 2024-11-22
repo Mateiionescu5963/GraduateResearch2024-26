@@ -1,11 +1,11 @@
-for window_size in $(seq 200 100 1000); do
-  for stride in $(seq 200 50 $window_size); do
-  	for test_set in $(seq 0.05 0.05 0.95); do
-  		for mal_ben in $(seq 0.0 0.1 0.5); do
-  			for dataset in $(seq 0 1 1); do
-  				python3 main.py $window_size $stride $test_set $mal_ben $dataset
-			done
+test_set=0.25
+mal_ben=0.5
+
+for window_size in 128 256 512 1024; do
+	for j in 1 2; do
+		stride=$(($window_size/$j))
+		for i in 8 16 32 64; do
+			python3 main.py $window_size $stride $test_set $mal_ben $i
 		done
 	done
-  done
 done

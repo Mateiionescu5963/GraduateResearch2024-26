@@ -39,7 +39,7 @@ if __name__ == "__main__":
     if args[2] == "final":
         assert(len(analysis_log.keys()) > 0)
         # pandas dataframe table for fast sorting and display
-        df = pd.DataFrame(columns = ["window", "stride", "test_set", "mal-benign-ratio", "dataset", "acc", "precision", "recall", "F1"])
+        df = pd.DataFrame(columns = ["window", "stride", "test_set", "mal-benign-ratio", "embed", "acc", "precision", "recall", "F1"])
         for k in analysis_log.keys():
             name_split = k[1:-5].replace("'", "").split(", ")
             name_split.pop(0)
@@ -64,7 +64,7 @@ if __name__ == "__main__":
 
         #sort by Accuracy and F1 and display
         pd.set_option('display.max_rows', None)
-        df = df.sort_values(by = ["acc", "F1"], ascending = False)
+        df = df.sort_values(by = ["F1", "acc"], ascending = False)
         print(df)
     else:
         try:

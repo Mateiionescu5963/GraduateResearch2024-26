@@ -1,4 +1,4 @@
-dir="./11-11-24_GRIDSEARCH/"
+dir="./TGB_24_grid/"
 type="assemble"
 for file in $dir*.txt; do
 	python3 analysis.py $file $type

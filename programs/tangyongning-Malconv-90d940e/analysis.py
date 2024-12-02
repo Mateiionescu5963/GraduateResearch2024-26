@@ -64,7 +64,7 @@ if __name__ == "__main__":
 
         #sort by Accuracy and F1 and display
         pd.set_option('display.max_rows', None)
-        df = df.sort_values(by = ["F1", "acc"], ascending = False)
+        df = df.sort_values(by = ["acc", "F1"], ascending = False)
         print(df)
     else:
         try:

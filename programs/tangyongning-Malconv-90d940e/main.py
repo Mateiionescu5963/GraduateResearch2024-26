@@ -1,7 +1,7 @@
 import torch
 import pandas as pd
 from dataset import ExeDataset, init_loader
-from model import MalConv
+from model import MalConv, MalLSTM
 from train import train_model
 from sklearn.model_selection import train_test_split as spl
 import os
@@ -14,15 +14,25 @@ if __name__ == "__main__":
 	# --
 	model_path = 'malconv_model_mlionestest.pth'
 	optimizer_path = 'optimizer_state_mlionestest.pth'
-	# -- 
+	# --
+
 	first_n_byte = 2000000
-	window_size = 500
+	batch_size = 1
+	epochs = 10
+
+	#LOG: Best performance achieved at 99.2% acc w/ 50.1% F1 with:
+	# win_size = 256
+	# stride = 256
+	# test_set_size = 0.25
+	# mal_benign_ratio = 0.5 (by heuristic)
+	# embed = 32
+	# IN: Thanksgiving Gridsearch '24
+	
+	window_size = 256
 	stride = window_size
 	test_set_size = 0.25
 	mal_benign_ratio = 0.5 #1 == all malware; 0 == all benign
-	embed = 8
-	batch_size = 1
-	epochs = 10
+	embed = 32
 
 	#dataset = 1
 	log = None
@@ -35,7 +45,7 @@ if __name__ == "__main__":
 		embed = int(sys.argv[5])
 
 
-		pth_start = './TGB_24_grid/'
+		pth_start = './12-2-24_CNNLSTM/'
 		model_path = pth_start+'malconv_model_'+str(sys.argv)+'_mlionestest.pth'
 		optimizer_path = pth_start+'optimizer_state_'+str(sys.argv)+'_mlionestest.pth'
 		log = open(pth_start+str(sys.argv)+"_LOG.txt", "w")
@@ -110,7 +120,13 @@ if __name__ == "__main__":
 	valid_loader = init_loader(valid_dataset, batch_size)[1]
 
 	# load model format
-	model = MalConv(input_length=first_n_byte, window_size=window_size, stride = stride, embed = embed)
+	# Standard Malconv
+	#model = MalConv(input_length=first_n_byte, window_size=window_size, stride = stride, embed = embed)
+
+	# CNN-LSTM MalConv
+	model = MalLSTM(input_length=first_n_byte, window_size=window_size, stride = stride, embed = embed)
+
+
 	# set device to cuda GPU if available
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 	model = model.to(device)

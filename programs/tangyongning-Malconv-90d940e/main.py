@@ -20,29 +20,32 @@ if __name__ == "__main__":
 	batch_size = 1
 	epochs = 10
 
-	#LOG: Best performance achieved at 99.2% acc w/ 50.1% F1 with:
+	#LOG: Best performance achieved at 99.4% acc w/ 50.1% F1 with:
 	# win_size = 256
 	# stride = 256
 	# test_set_size = 0.25
 	# mal_benign_ratio = 0.5 (by heuristic)
 	# embed = 32
-	# IN: Thanksgiving Gridsearch '24
-	
+	# mode = "LSTM"
+	# ON/IN: 12-2-24
+
 	window_size = 256
 	stride = window_size
 	test_set_size = 0.25
 	mal_benign_ratio = 0.5 #1 == all malware; 0 == all benign
 	embed = 32
+	mode = "lstm"
 
 	#dataset = 1
 	log = None
 
-	if len(sys.argv) == 6:
+	if len(sys.argv) == 7:
 		window_size = int(sys.argv[1])
 		stride = int(sys.argv[2])
 		test_set_size = float(sys.argv[3])
 		mal_benign_ratio = float(sys.argv[4])
 		embed = int(sys.argv[5])
+		mode = sys.argv[6]
 
 
 		pth_start = './12-2-24_CNNLSTM/'
@@ -120,11 +123,15 @@ if __name__ == "__main__":
 	valid_loader = init_loader(valid_dataset, batch_size)[1]
 
 	# load model format
-	# Standard Malconv
-	#model = MalConv(input_length=first_n_byte, window_size=window_size, stride = stride, embed = embed)
-
-	# CNN-LSTM MalConv
-	model = MalLSTM(input_length=first_n_byte, window_size=window_size, stride = stride, embed = embed)
+	if mode.lower() == "std":
+		# Standard Malconv
+		model = MalConv(input_length=first_n_byte, window_size=window_size, stride = stride, embed = embed)
+	elif mode.lower() == "lstm":
+		# CNN-LSTM MalConv
+		model = MalLSTM(input_length=first_n_byte, window_size=window_size, stride = stride, embed = embed)
+	else:
+		print("MODEL LOADING ERROR\nNo Such Model '"+mode+"'")
+		exit(1)
 
 
 	# set device to cuda GPU if available

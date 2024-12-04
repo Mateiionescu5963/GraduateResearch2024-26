@@ -17,16 +17,17 @@ if __name__ == "__main__":
 	# --
 
 	first_n_byte = 2000000
+	set_size = 1.0
 	batch_size = 1
 	epochs = 10
 
-	#LOG: Best performance achieved at 99.4% acc w/ 50.1% F1 with:
+	#LOG: Best performance achieved at 99.6% acc w/ 50.7% F1 with:
 	# win_size = 256
 	# stride = 256
-	# test_set_size = 0.25
+	# test_set_size = 0.25 -- and retest w/ = 1
 	# mal_benign_ratio = 0.5 (by heuristic)
 	# embed = 32
-	# mode = "LSTM"
+	# mode = "MalLSTM"
 	# ON/IN: 12-2-24
 
 	window_size = 256
@@ -34,7 +35,7 @@ if __name__ == "__main__":
 	test_set_size = 0.25
 	mal_benign_ratio = 0.5 #1 == all malware; 0 == all benign
 	embed = 32
-	mode = "lstm"
+	mode = "mallstm"
 
 	#dataset = 1
 	log = None
@@ -47,10 +48,12 @@ if __name__ == "__main__":
 		embed = int(sys.argv[5])
 		mode = sys.argv[6]
 
+		pth_start = './gridsearch_malratio_12-4-24/'
+		multi_train = False
 
-		pth_start = './'
-		model_path = pth_start+'malconv_model_'+str(sys.argv)+'_mlionestest.pth'
-		optimizer_path = pth_start+'optimizer_state_'+str(sys.argv)+'_mlionestest.pth'
+		if multi_train:
+			model_path = pth_start+'malconv_model_'+str(sys.argv)+'_mlionestest.pth'
+			optimizer_path = pth_start+'optimizer_state_'+str(sys.argv)+'_mlionestest.pth'
 		log = open(pth_start+str(sys.argv)+"_LOG.txt", "w")
 	
 	# -----------------
@@ -97,8 +100,14 @@ if __name__ == "__main__":
 		print("Error in malware-benign ratio parameter: proceeding with train/test using dataset standard")
 
 
-	#split data 
-	tr_table, val_table = spl(label_table, test_size = test_set_size)
+	#split data
+	if test_set_size == 1:
+		tr_table = label_table.sample(n = 10)
+		val_table = label_table.sample(frac = set_size)
+	else:
+		tr_table, val_table = spl(label_table, test_size = test_set_size)
+		tr_table = tr_table.sample(frac = set_size)
+		val_table = val_table.sample(frac = set_size)
 	
 	# --------------
 
@@ -133,12 +142,13 @@ if __name__ == "__main__":
 	elif mode.lower() == "mallstm":
 		# CNN-LSTM MalConv
 		model = MalLSTM(input_length=first_n_byte, window_size=window_size, stride = stride, embed = embed)
+	elif mode.lower() == "cnn_lstm":
+		model = CNN_LSTM(embed_dim=embed, device=device)
 	else:
 		print("MODEL LOADING ERROR\nNo Such Model '"+mode+"'")
 		exit(1)
 
-
-
+	model = model.to(device)
 
 	# set pytorch loss and optimization parameters
 	criterion = torch.nn.BCEWithLogitsLoss()
@@ -161,20 +171,28 @@ if __name__ == "__main__":
 	# ---------------
 
 	try:
-		model = model.to(device)
 		best_model = train_model(model, criterion, optimizer, device, epochs, train_loader, valid_loader, log = log)
 	except KeyboardInterrupt:
 		print("interrupted")
-	except RuntimeError as e: #CUDA out of memory
+	except RuntimeError as e:
 		print(str(e))
-		device = torch.device('cpu')
-		model = model.to(device)
-		best_model = train_model(model, criterion, optimizer, device, epochs, train_loader, valid_loader, log=log)
+		#print("\n!!!!!!!\nSWITCH TO CPU\n!!!!!!!\n")
+		#device = torch.device('cpu')
+
+		#criterion = torch.nn.BCEWithLogitsLoss()
+		#optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-4)
+
+		#if mode.lower() == "cnn_lstm":
+		#	model = CNN_LSTM(embed_dim=embed, device=device)
+
+		#model = model.to(device)
+		#best_model = train_model(model, criterion, optimizer, device, epochs, train_loader, valid_loader, log=log)
 	finally:
 		if log:
 			log.close()
 
-		torch.save(model.state_dict(), model_path)
-		torch.save(optimizer.state_dict(), optimizer_path)
+		if not test_set_size == 1:
+			torch.save(model.state_dict(), model_path)
+			torch.save(optimizer.state_dict(), optimizer_path)
 
 		print("Model and optimizer state saved.")

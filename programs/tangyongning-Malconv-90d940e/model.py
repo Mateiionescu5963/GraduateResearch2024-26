@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+#import torch.nn.functional as F
+
 class MalConv(nn.Module):
     def __init__(self, input_length=2000000, window_size=500, stride = 500, embed = 8):
         super(MalConv, self).__init__()
@@ -53,3 +55,6 @@ class MalLSTM(nn.Module):
         x = self.fc_1(x)
         x = self.fc_2(x)
         return x
+
+
+

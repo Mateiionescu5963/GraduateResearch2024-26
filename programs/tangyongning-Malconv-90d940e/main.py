@@ -1,7 +1,7 @@
 import torch
 import pandas as pd
 from dataset import ExeDataset, init_loader
-from model import MalConv, MalLSTM
+from model import MalConv, MalLSTM, CNN_LSTM
 from train import train_model
 from sklearn.model_selection import train_test_split as spl
 import os
@@ -48,7 +48,7 @@ if __name__ == "__main__":
 		mode = sys.argv[6]
 
 
-		pth_start = './12-2-24_CNNLSTM/'
+		pth_start = './'
 		model_path = pth_start+'malconv_model_'+str(sys.argv)+'_mlionestest.pth'
 		optimizer_path = pth_start+'optimizer_state_'+str(sys.argv)+'_mlionestest.pth'
 		log = open(pth_start+str(sys.argv)+"_LOG.txt", "w")
@@ -122,11 +122,15 @@ if __name__ == "__main__":
 	train_loader, valid_loader = init_loader(train_dataset, batch_size)
 	valid_loader = init_loader(valid_dataset, batch_size)[1]
 
+
+	# set device to cuda GPU if available
+	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 	# load model format
-	if mode.lower() == "std":
+	if mode.lower() == "malconv":
 		# Standard Malconv
 		model = MalConv(input_length=first_n_byte, window_size=window_size, stride = stride, embed = embed)
-	elif mode.lower() == "lstm":
+	elif mode.lower() == "mallstm":
 		# CNN-LSTM MalConv
 		model = MalLSTM(input_length=first_n_byte, window_size=window_size, stride = stride, embed = embed)
 	else:
@@ -134,9 +138,7 @@ if __name__ == "__main__":
 		exit(1)
 
 
-	# set device to cuda GPU if available
-	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-	model = model.to(device)
+
 
 	# set pytorch loss and optimization parameters
 	criterion = torch.nn.BCEWithLogitsLoss()
@@ -159,9 +161,15 @@ if __name__ == "__main__":
 	# ---------------
 
 	try:
+		model = model.to(device)
 		best_model = train_model(model, criterion, optimizer, device, epochs, train_loader, valid_loader, log = log)
 	except KeyboardInterrupt:
 		print("interrupted")
+	except RuntimeError as e: #CUDA out of memory
+		print(str(e))
+		device = torch.device('cpu')
+		model = model.to(device)
+		best_model = train_model(model, criterion, optimizer, device, epochs, train_loader, valid_loader, log=log)
 	finally:
 		if log:
 			log.close()

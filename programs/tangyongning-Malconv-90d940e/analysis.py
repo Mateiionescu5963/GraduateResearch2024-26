@@ -39,13 +39,17 @@ if __name__ == "__main__":
     if args[2] == "final":
         assert(len(analysis_log.keys()) > 0)
         # pandas dataframe table for fast sorting and display
-        df = pd.DataFrame(columns = ["window", "stride", "test_set", "mal-benign-ratio", "embed", "mode", "acc", "precision", "recall", "F1"])
+        df = pd.DataFrame(columns = ["window", "stride", "test_set", "mal-benign-ratio", "embed", "acc", "precision", "recall", "F1"])
         for k in analysis_log.keys():
             name_split = k[1:-5].replace("'", "").split(", ")
             name_split.pop(0)
             for i, v in enumerate(name_split):
                 if i < 2:
                     name_split[i] = int(v)
+                elif i + 1 == 6:
+                    if not "mode" in df.columns:
+                        df.insert(5, "mode", "unlabeled")
+                    name_split[i] = v
                 else:
                     name_split[i] = float(v)
 
@@ -84,7 +88,6 @@ if __name__ == "__main__":
                 analysis_log.setdefault(name, results)
             else:
                 analysis_log[name] = results
-
 
         except FileNotFoundError:
             print("404: File Not Found")

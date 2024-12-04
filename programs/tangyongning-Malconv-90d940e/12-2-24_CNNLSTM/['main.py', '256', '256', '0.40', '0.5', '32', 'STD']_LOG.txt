@@ -1,0 +1,1 @@
+Epoch accuracy is 0.993, precision is 0.500, Recall is 0.500, F1 is 0.500.

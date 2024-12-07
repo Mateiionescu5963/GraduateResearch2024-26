@@ -102,8 +102,9 @@ if __name__ == "__main__":
 
 	#split data
 	if test_set_size == 1:
-		tr_table = label_table.sample(n = 10)
-		val_table = label_table.sample(frac = set_size)
+		tr_table, val_table = spl(label_table, test_size=len(label_table) - 10)
+		tr_table = tr_table.sample(frac=set_size)
+		val_table = val_table.sample(frac=set_size)
 	else:
 		tr_table, val_table = spl(label_table, test_size = test_set_size)
 		tr_table = tr_table.sample(frac = set_size)

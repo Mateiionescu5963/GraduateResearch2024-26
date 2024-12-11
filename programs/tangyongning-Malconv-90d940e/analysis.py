@@ -57,18 +57,18 @@ if __name__ == "__main__":
             df.loc[len(df)] = name_split + arr
 
         # skip 1.0 accuracy (assume methodological failure for now)
-        df = df[df["acc"] < 1.0]
+        #df = df[df["acc"] < 1.0]
         # TODO add case later on in research to determine for sure
 
         # sift through data by altering different filters below:
-        df = df[df["mal-benign-ratio"] <= 0.6]
+        #df = df[df["mal-benign-ratio"] <= 0.6]
         #df = df[df["F1"] > 0.1]
         #df = df[df["acc"] > df["mal-benign-ratio"]]
         #df = df[df["window"] > 500]
 
         #sort by Accuracy and F1 and display
         pd.set_option('display.max_rows', None)
-        df = df.sort_values(by = ["mal-benign-ratio"], ascending = False)
+        df = df.sort_values(by = ["acc", "F1"], ascending = False)
         print(df)
     else:
         try:

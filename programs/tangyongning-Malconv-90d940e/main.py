@@ -68,30 +68,39 @@ if __name__ == "__main__":
 
 	#reformat table based on malware-benign ratio:
 	#ASSERT(type 0 == benign and type 1 == malware)
+	mal = label_table[label_table["ground_truth"] == 1]
+	ben = label_table[label_table["ground_truth"] == 0]
+
+	c_mal = len(mal)
+	c_ben = len(ben)
+	print("Available Malware in dataset: " + str(c_mal) + "\n"
+		  + "Available Benign in dataset: " + str(c_ben) + "\n")
+
 	if 1 > mal_benign_ratio > 0:
-		mal = label_table[label_table["ground_truth"] == 1]
-		ben = label_table[label_table["ground_truth"] == 0]
+		#loop to determine set size
+		if not c_mal == c_ben:
+			if not mal_benign_ratio == 0.5:
+				if c_mal / (c_mal + c_ben) > mal_benign_ratio:
+					while not abs((c_mal / (c_mal + c_ben)) - mal_benign_ratio) < 2 / (c_mal + c_ben):
+						c_mal -= 1
+						if not c_mal / (c_mal + c_ben) > mal_benign_ratio:
+							break
+				else:
+					while not abs((c_ben / (c_mal + c_ben)) - mal_benign_ratio) < 2 / (c_mal + c_ben):
+						c_ben -= 1
+						if c_mal / (c_mal + c_ben) > mal_benign_ratio:
+							break
+			else:
+				c_mal = c_ben
+		else: #if the categories are of equal size
+			c_mal = (c_mal + c_ben) * mal_benign_ratio
+			c_ben = (c_mal + c_ben) * (1 - mal_benign_ratio)
 
-
-		c_mal = len(mal)
-		c_ben = len(ben)
-		print("Available Malware in dataset: "+str(c_mal)+"\n"
-			  +"Available Benign in dataset: "+str(c_ben)+"\n")
-
-		#determine set size by using 100% of the smallest category
-		if c_mal > c_ben:
-			c_mal = (c_ben / (1 - mal_benign_ratio)) * mal_benign_ratio
-		elif c_mal < c_ben:
-			c_ben = (c_mal / mal_benign_ratio) * (1 - mal_benign_ratio)
-		else: #if the categories are of equal size, use the set whose final proportion is larger
-			if mal_benign_ratio > 0.5:
-				c_ben = (c_mal / mal_benign_ratio) * (1 - mal_benign_ratio)
-			elif mal_benign_ratio < 0.5:
-				c_mal = (c_ben / (1 - mal_benign_ratio)) * mal_benign_ratio
+		assert (not (c_mal == 0 or c_ben == 0))
 
 		#take random samples of the appropriate sizes from each category and concatenate them
-		if not (c_mal == 0 or c_ben == 0):
-			label_table = pd.concat([mal.sample(int(c_mal)), ben.sample(int(c_ben))])
+		label_table = pd.concat([mal.sample(int(c_mal) - 1), ben.sample(int(c_ben) - 1)])
+
 	elif mal_benign_ratio == 1:
 		label_table = label_table[label_table["ground_truth"] == 1]
 	elif mal_benign_ratio == 0:

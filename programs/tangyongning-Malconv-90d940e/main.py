@@ -1,5 +1,6 @@
 import torch
 import pandas as pd
+import numpy as np
 from dataset import ExeDataset, init_loader
 from model import MalConv, MalLSTM, CNN_LSTM
 from train import train_model
@@ -7,6 +8,104 @@ from sklearn.model_selection import train_test_split as spl
 import os
 import sys
 import warnings
+
+def train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs, window_size, stride, test_set_size, embed, mode, log, label_table, dataset_test = False):
+	# split data
+	if test_set_size == 1:
+		tr_table, val_table = spl(label_table, test_size=len(label_table) - 10)
+		tr_table = tr_table.sample(frac=set_size)
+		val_table = val_table.sample(frac=set_size)
+	else:
+		tr_table, val_table = spl(label_table, test_size=test_set_size)
+		tr_table = tr_table.sample(frac=set_size)
+		val_table = val_table.sample(frac=set_size)
+
+	# --------------
+
+	print('Training Set:')
+	print('\tTotal', len(tr_table), 'files')
+	print('\tMalware Count :', len(tr_table[tr_table['ground_truth'] == 1]))
+	print('\tGoodware Count:', len(tr_table[tr_table['ground_truth'] == 0]))
+
+	print('Validation Set:')
+	print('\tTotal', len(val_table), 'files')
+	print('\tMalware Count :', len(val_table[val_table['ground_truth'] == 1]))
+	print('\tGoodware Count:', len(val_table[val_table['ground_truth'] == 0]))
+
+	# --------------
+
+	# dataset files as dataset.py objects
+	train_dataset = ExeDataset(list(tr_table.index), data_path, list(tr_table.ground_truth), first_n_byte)
+	valid_dataset = ExeDataset(list(val_table.index), data_path, list(val_table.ground_truth), first_n_byte)
+
+	# datasets as pytorch utils objects
+	train_loader, valid_loader = init_loader(train_dataset, batch_size)
+	valid_loader = init_loader(valid_dataset, batch_size)[1]
+
+	# set device to cuda GPU if available
+	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+	# load model format
+	if mode.lower() == "malconv":
+		# Standard Malconv
+		model = MalConv(input_length=first_n_byte, window_size=window_size, stride=stride, embed=embed)
+	elif mode.lower() == "mallstm":
+		# CNN-LSTM MalConv
+		model = MalLSTM(input_length=first_n_byte, window_size=window_size, stride=stride, embed=embed)
+	elif mode.lower() == "cnn_lstm":
+		model = CNN_LSTM(embed_dim=embed, device=device)
+	else:
+		print("MODEL LOADING ERROR\nNo Such Model '" + mode + "'")
+		exit(1)
+
+	model = model.to(device)
+
+	# set pytorch loss and optimization parameters
+	criterion = torch.nn.BCEWithLogitsLoss()
+	optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-4)
+
+	# --------------
+
+	if torch.cuda.is_available():
+		print("CUDA is available. Training on GPU.")
+	else:
+		print("CUDA is not available. Training on CPU.")
+
+	if os.path.exists(model_path) and os.path.exists(optimizer_path):
+		print("Loading saved model and optimizer state...")
+		model.load_state_dict(torch.load(model_path))
+		optimizer.load_state_dict(torch.load(optimizer_path))
+	else:
+		print("No saved model found, training from scratch...")
+
+	# ---------------
+
+	try:
+		best_model = train_model(model, criterion, optimizer, device, epochs, train_loader, valid_loader, log=log)
+	except KeyboardInterrupt:
+		print("interrupted")
+	except RuntimeError as e:
+		print(str(e))
+	# print("\n!!!!!!!\nSWITCH TO CPU\n!!!!!!!\n")
+	# device = torch.device('cpu')
+
+	# criterion = torch.nn.BCEWithLogitsLoss()
+	# optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-4)
+
+	# if mode.lower() == "cnn_lstm":
+	#	model = CNN_LSTM(embed_dim=embed, device=device)
+
+	# model = model.to(device)
+	# best_model = train_model(model, criterion, optimizer, device, epochs, train_loader, valid_loader, log=log)
+	finally:
+		if log:
+			log.close()
+
+		if not test_set_size == 1 or not dataset_test:
+			torch.save(model.state_dict(), model_path)
+			torch.save(optimizer.state_dict(), optimizer_path)
+
+			print("Model and optimizer state saved.")
 
 if __name__ == "__main__":
 	warnings.filterwarnings("ignore")
@@ -39,8 +138,11 @@ if __name__ == "__main__":
 
 	#dataset = 1
 	log = None
+	dataset_test = True
 
-	if len(sys.argv) == 7:
+	if dataset_test:
+		log = open("temp.txt", "w")
+	elif len(sys.argv) == 7:
 		window_size = int(sys.argv[1])
 		stride = int(sys.argv[2])
 		test_set_size = float(sys.argv[3])
@@ -48,7 +150,7 @@ if __name__ == "__main__":
 		embed = int(sys.argv[5])
 		mode = sys.argv[6]
 
-		pth_start = './gridsearch_malratio_12-4-24/'
+		pth_start = './NULL/'
 		multi_train = False
 
 		if multi_train:
@@ -108,101 +210,61 @@ if __name__ == "__main__":
 	else:
 		print("Error in malware-benign ratio parameter: proceeding with train/test using dataset standard")
 
-
-	#split data
-	if test_set_size == 1:
-		tr_table, val_table = spl(label_table, test_size=len(label_table) - 10)
-		tr_table = tr_table.sample(frac=set_size)
-		val_table = val_table.sample(frac=set_size)
+	if not dataset_test:
+		train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs, window_size, stride, test_set_size, embed, mode, log, label_table)
 	else:
-		tr_table, val_table = spl(label_table, test_size = test_set_size)
-		tr_table = tr_table.sample(frac = set_size)
-		val_table = val_table.sample(frac = set_size)
-	
-	# --------------
-
-	print('Training Set:')
-	print('\tTotal', len(tr_table), 'files')
-	print('\tMalware Count :', len(tr_table[tr_table['ground_truth'] == 1]))
-	print('\tGoodware Count:', len(tr_table[tr_table['ground_truth'] == 0]))
-
-	print('Validation Set:')
-	print('\tTotal', len(val_table), 'files')
-	print('\tMalware Count :', len(val_table[val_table['ground_truth'] == 1]))
-	print('\tGoodware Count:', len(val_table[val_table['ground_truth'] == 0]))
-	
-	# --------------
-
-	# dataset files as dataset.py objects
-	train_dataset = ExeDataset(list(tr_table.index), data_path, list(tr_table.ground_truth), first_n_byte)
-	valid_dataset = ExeDataset(list(val_table.index), data_path, list(val_table.ground_truth), first_n_byte)
-
-	# datasets as pytorch utils objects
-	train_loader, valid_loader = init_loader(train_dataset, batch_size)
-	valid_loader = init_loader(valid_dataset, batch_size)[1]
+		exclusion_threshold = -0.005
+		excluded_set_indices = []
 
 
-	# set device to cuda GPU if available
-	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+		train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs, window_size, stride,
+			  test_set_size, embed, mode, log, label_table, dataset_test = True)
 
-	# load model format
-	if mode.lower() == "malconv":
-		# Standard Malconv
-		model = MalConv(input_length=first_n_byte, window_size=window_size, stride = stride, embed = embed)
-	elif mode.lower() == "mallstm":
-		# CNN-LSTM MalConv
-		model = MalLSTM(input_length=first_n_byte, window_size=window_size, stride = stride, embed = embed)
-	elif mode.lower() == "cnn_lstm":
-		model = CNN_LSTM(embed_dim=embed, device=device)
-	else:
-		print("MODEL LOADING ERROR\nNo Such Model '"+mode+"'")
-		exit(1)
+		log = open("temp.txt", "r")
+		# format: "Epoch accuracy is X.XXX, precision is X.XXX, Recall is X.XXX, F1 is X.XXX."
+		raw = f.read()[6:].replace(" is ", ":")[:-1].split(",")  # string splice magic to get the values by themselves
+		log.close()
+		init_results = []
+		for r in raw:
+			init_results.append(float(r[-5:]))
 
-	model = model.to(device)
+		#shuffle dataset
+		label_table = label_table.sample(frac = 1)
 
-	# set pytorch loss and optimization parameters
-	criterion = torch.nn.BCEWithLogitsLoss()
-	optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-4)
+		#create a number of subsets equal to the sqrt of the full dataset size
+		n = len(label_table)
+		subset_size = int(np.sqrt(n))
+		print("Subset Size is: "+str(subset_size))
 
-	# --------------
-	
-	if torch.cuda.is_available():
-		print("CUDA is available. Training on GPU.")
-	else:
-		print("CUDA is not available. Training on CPU.")
+		label_sets = np.array_split(label_table, subset_size)
 
-	if os.path.exists(model_path) and os.path.exists(optimizer_path):
-		print("Loading saved model and optimizer state...")
-		model.load_state_dict(torch.load(model_path))
-		optimizer.load_state_dict(torch.load(optimizer_path))
-	else:
-		print("No saved model found, training from scratch...")
+		#for each set, exclude it and train
+		for i, excluded in enumerate(label_sets):
+			test_labels = label_table[~label_table.isin(excluded)].dropna()
 
-	# ---------------
+			log.open("temp.txt", "w")
+			train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs, window_size, stride,
+				  test_set_size, embed, mode, log, test_labels, dataset_test=True)
 
-	try:
-		best_model = train_model(model, criterion, optimizer, device, epochs, train_loader, valid_loader, log = log)
-	except KeyboardInterrupt:
-		print("interrupted")
-	except RuntimeError as e:
-		print(str(e))
-		#print("\n!!!!!!!\nSWITCH TO CPU\n!!!!!!!\n")
-		#device = torch.device('cpu')
-
-		#criterion = torch.nn.BCEWithLogitsLoss()
-		#optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-4)
-
-		#if mode.lower() == "cnn_lstm":
-		#	model = CNN_LSTM(embed_dim=embed, device=device)
-
-		#model = model.to(device)
-		#best_model = train_model(model, criterion, optimizer, device, epochs, train_loader, valid_loader, log=log)
-	finally:
-		if log:
+			log = open("temp.txt", "r")
+			# format: "Epoch accuracy is X.XXX, precision is X.XXX, Recall is X.XXX, F1 is X.XXX."
+			raw = f.read()[6:].replace(" is ", ":")[:-1].split(",")  # string splice magic to get the values by themselves
 			log.close()
+			results = []
+			for r in raw:
+				results.append(float(r[-5:]))
 
-		if not test_set_size == 1:
-			torch.save(model.state_dict(), model_path)
-			torch.save(optimizer.state_dict(), optimizer_path)
+			change = init_results[0] - results[0]
+			if change > 0 or change >= exclusion_threshold:
+				excluded_set_indices.append(i)
 
-		print("Model and optimizer state saved.")
+		exclusion_zone = None
+		for index in excluded_set_indices:
+			if exclusion_zone:
+				exclusion_zone = pd.concat([exclusion_zone, label_sets[index]])
+			else:
+				exclusion_zone = label_sets[index]
+
+		if exclusion_zone:
+			exclusion_zone.to_csv('potential_exclusion.csv', index = True)
+

@@ -2,12 +2,59 @@ import torch
 import pandas as pd
 import numpy as np
 from dataset import ExeDataset, init_loader
-from model import MalConv, MalLSTM, CNN_LSTM
+from model import MalConv, MalLSTM, CNN_LSTM, MalTF
 from train import train_model
 from sklearn.model_selection import train_test_split as spl
 import os
 import sys
 import warnings
+
+def balance_dataset(path, mal_benign_ratio):
+	# assemble data labels as pandas table
+	label_table = pd.read_csv(path, header=None, index_col=0).rename(columns={1: 'ground_truth'}).groupby(level=0).last()
+
+	# reformat table based on malware-benign ratio:
+	# ASSERT(type 0 == benign and type 1 == malware)
+	mal = label_table[label_table["ground_truth"] == 1]
+	ben = label_table[label_table["ground_truth"] == 0]
+
+	c_mal = len(mal)
+	c_ben = len(ben)
+	print("Available Malware in dataset: " + str(c_mal) + "\n"
+		  + "Available Benign in dataset: " + str(c_ben) + "\n")
+
+	if 1 > mal_benign_ratio > 0:
+		# loop to determine set size
+		if not c_mal == c_ben:
+			if not mal_benign_ratio == 0.5:
+				if c_mal / (c_mal + c_ben) > mal_benign_ratio:
+					while not abs((c_mal / (c_mal + c_ben)) - mal_benign_ratio) < 2 / (c_mal + c_ben):
+						c_mal -= 1
+						if not c_mal / (c_mal + c_ben) > mal_benign_ratio:
+							break
+				else:
+					while not abs((c_ben / (c_mal + c_ben)) - mal_benign_ratio) < 2 / (c_mal + c_ben):
+						c_ben -= 1
+						if c_mal / (c_mal + c_ben) > mal_benign_ratio:
+							break
+			else:
+				c_mal = c_ben
+		else:  # if the categories are of equal size
+			c_mal = (c_mal + c_ben) * mal_benign_ratio
+			c_ben = (c_mal + c_ben) * (1 - mal_benign_ratio)
+
+		assert (not (c_mal == 0 or c_ben == 0))
+
+		# take random samples of the appropriate sizes from each category and concatenate them
+		return pd.concat([mal.sample(int(c_mal) - 1), ben.sample(int(c_ben) - 1)])
+
+	elif mal_benign_ratio == 1:
+		return label_table[label_table["ground_truth"] == 1]
+	elif mal_benign_ratio == 0:
+		return label_table[label_table["ground_truth"] == 0]
+	else:
+		print("Error in malware-benign ratio parameter: proceeding with train/test using dataset standard")
+		return label_table
 
 def train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs, window_size, stride, test_set_size, embed, mode, log, label_table, dataset_test = False):
 	# split data
@@ -54,6 +101,8 @@ def train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs
 		model = MalLSTM(input_length=first_n_byte, window_size=window_size, stride=stride, embed=embed)
 	elif mode.lower() == "cnn_lstm":
 		model = CNN_LSTM(embed_dim=embed, device=device)
+	elif mode.lower() == "maltf":
+		model = MalTF(input_length=first_n_byte, window_size=window_size, stride=stride, embed=embed)
 	else:
 		print("MODEL LOADING ERROR\nNo Such Model '" + mode + "'")
 		exit(1)
@@ -101,7 +150,7 @@ def train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs
 		if log:
 			log.close()
 
-		if not test_set_size == 1 or not dataset_test:
+		if not test_set_size == 1 and not dataset_test:
 			torch.save(model.state_dict(), model_path)
 			torch.save(optimizer.state_dict(), optimizer_path)
 
@@ -138,10 +187,12 @@ if __name__ == "__main__":
 
 	#dataset = 1
 	log = None
-	dataset_test = True
+	dataset_test = False
 
-	if dataset_test:
-		log = open("temp.txt", "w")
+	if len(sys.argv) == 2:
+		dataset_test = bool(sys.argv[1])
+		if dataset_test:
+			log = open("temp.txt", "w")
 	elif len(sys.argv) == 7:
 		window_size = int(sys.argv[1])
 		stride = int(sys.argv[2])
@@ -150,7 +201,7 @@ if __name__ == "__main__":
 		embed = int(sys.argv[5])
 		mode = sys.argv[6]
 
-		pth_start = './NULL/'
+		pth_start = './'
 		multi_train = False
 
 		if multi_train:
@@ -165,60 +216,15 @@ if __name__ == "__main__":
 
 	# -----------------
 
-	#assemble data labels as pandas table
-	label_table = pd.read_csv(label_path, header = None, index_col = 0).rename(columns={1: 'ground_truth'}).groupby(level=0).last()
+	label_table = balance_dataset(label_path, mal_benign_ratio)
 
-	#reformat table based on malware-benign ratio:
-	#ASSERT(type 0 == benign and type 1 == malware)
-	mal = label_table[label_table["ground_truth"] == 1]
-	ben = label_table[label_table["ground_truth"] == 0]
 
-	c_mal = len(mal)
-	c_ben = len(ben)
-	print("Available Malware in dataset: " + str(c_mal) + "\n"
-		  + "Available Benign in dataset: " + str(c_ben) + "\n")
-
-	if 1 > mal_benign_ratio > 0:
-		#loop to determine set size
-		if not c_mal == c_ben:
-			if not mal_benign_ratio == 0.5:
-				if c_mal / (c_mal + c_ben) > mal_benign_ratio:
-					while not abs((c_mal / (c_mal + c_ben)) - mal_benign_ratio) < 2 / (c_mal + c_ben):
-						c_mal -= 1
-						if not c_mal / (c_mal + c_ben) > mal_benign_ratio:
-							break
-				else:
-					while not abs((c_ben / (c_mal + c_ben)) - mal_benign_ratio) < 2 / (c_mal + c_ben):
-						c_ben -= 1
-						if c_mal / (c_mal + c_ben) > mal_benign_ratio:
-							break
-			else:
-				c_mal = c_ben
-		else: #if the categories are of equal size
-			c_mal = (c_mal + c_ben) * mal_benign_ratio
-			c_ben = (c_mal + c_ben) * (1 - mal_benign_ratio)
-
-		assert (not (c_mal == 0 or c_ben == 0))
-
-		#take random samples of the appropriate sizes from each category and concatenate them
-		label_table = pd.concat([mal.sample(int(c_mal) - 1), ben.sample(int(c_ben) - 1)])
-
-	elif mal_benign_ratio == 1:
-		label_table = label_table[label_table["ground_truth"] == 1]
-	elif mal_benign_ratio == 0:
-		label_table = label_table[label_table["ground_truth"] == 0]
-	else:
-		print("Error in malware-benign ratio parameter: proceeding with train/test using dataset standard")
-
-	if not dataset_test:
-		train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs, window_size, stride, test_set_size, embed, mode, log, label_table)
-	else:
+	if dataset_test:
 		exclusion_threshold = -0.005
 		excluded_set_indices = []
 
 
-		train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs, window_size, stride,
-			  test_set_size, embed, mode, log, label_table, dataset_test = True)
+		train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs, window_size, stride, test_set_size, embed, mode, log, label_table, dataset_test = True)
 
 		log = open("temp.txt", "r")
 		# format: "Epoch accuracy is X.XXX, precision is X.XXX, Recall is X.XXX, F1 is X.XXX."
@@ -239,24 +245,29 @@ if __name__ == "__main__":
 		label_sets = np.array_split(label_table, subset_size)
 
 		#for each set, exclude it and train
-		for i, excluded in enumerate(label_sets):
-			test_labels = label_table[~label_table.isin(excluded)].dropna()
+		try:
+			for i, excluded in enumerate(label_sets):
+				test_labels = label_table[~label_table.isin(excluded)].dropna()
 
-			log.open("temp.txt", "w")
-			train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs, window_size, stride,
-				  test_set_size, embed, mode, log, test_labels, dataset_test=True)
+				log.open("temp.txt", "w")
+				train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs, window_size, stride, test_set_size, embed, mode, log, test_labels, dataset_test=True)
 
-			log = open("temp.txt", "r")
-			# format: "Epoch accuracy is X.XXX, precision is X.XXX, Recall is X.XXX, F1 is X.XXX."
-			raw = f.read()[6:].replace(" is ", ":")[:-1].split(",")  # string splice magic to get the values by themselves
-			log.close()
-			results = []
-			for r in raw:
-				results.append(float(r[-5:]))
+				log = open("temp.txt", "r")
+				# format: "Epoch accuracy is X.XXX, precision is X.XXX, Recall is X.XXX, F1 is X.XXX."
+				raw = f.read()[6:].replace(" is ", ":")[:-1].split(",")  # string splice magic to get the values by themselves
+				log.close()
+				results = []
+				for r in raw:
+					results.append(float(r[-5:]))
 
-			change = init_results[0] - results[0]
-			if change > 0 or change >= exclusion_threshold:
-				excluded_set_indices.append(i)
+				change = init_results[0] - results[0]
+				if change > 0 or change >= exclusion_threshold:
+					excluded_set_indices.append(i)
+		except:
+			print("An exception occurred during processing of exclusions")
+		finally:
+			if log:
+				log.close()
 
 		exclusion_zone = None
 		for index in excluded_set_indices:
@@ -267,4 +278,7 @@ if __name__ == "__main__":
 
 		if exclusion_zone:
 			exclusion_zone.to_csv('potential_exclusion.csv', index = True)
+	else:
+		train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs, window_size, stride, test_set_size, embed, mode, log, label_table)
+
 

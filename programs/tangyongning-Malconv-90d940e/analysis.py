@@ -5,6 +5,18 @@ import json
 
 import pandas as pd
 
+def extract_scores(path):
+    f = open(path, "r")
+
+    # format: "Epoch accuracy is X.XXX, precision is X.XXX, Recall is X.XXX, F1 is X.XXX."
+    raw = f.read()[6:].replace(" is ", ":")[:-1].split(",")  # string splice magic to get the values by themselves
+    results = []
+    for r in raw:
+        results.append(float(r[-5:]))
+
+    f.close()
+    return results
+
 if __name__ == "__main__":
     print(".", end = "")
     args = None
@@ -76,13 +88,7 @@ if __name__ == "__main__":
             assert(path[-4:] == ".txt")
             name = path[path.rindex("/")+1:-4] #string splice to extract filename w/o extension from the path
 
-            f = open(path, "r")
-
-            # format: "Epoch accuracy is X.XXX, precision is X.XXX, Recall is X.XXX, F1 is X.XXX."
-            raw = f.read()[6:].replace(" is ", ":")[:-1].split(",") # string splice magic to get the values by themselves
-            results = []
-            for r in raw:
-                results.append(float(r[-5:]))
+            results = extract_scores(path)
 
             if name not in analysis_log.keys():
                 analysis_log.setdefault(name, results)

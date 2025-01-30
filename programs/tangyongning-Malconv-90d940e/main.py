@@ -1,4 +1,5 @@
 import torch
+from torch.utils.data import DataLoader
 import pandas as pd
 import numpy as np
 from dataset import ExeDataset, init_loader
@@ -57,7 +58,7 @@ def balance_dataset(path, mal_benign_ratio):
 		print("Error in malware-benign ratio parameter: proceeding with train/test using dataset standard")
 		return label_table
 
-def train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs, window_size, stride, test_set_size, embed, mode, log, label_table, dataset_test = False, tr_table = None, val_table = None):
+def train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs, window_size, stride, test_set_size, embed, mode, log, label_table, dataset_test = False, tr_table = pd.DataFrame(), val_table = pd.DataFrame()):
 	# split data
 	if tr_table.empty or val_table.empty:
 		if test_set_size == 1:
@@ -228,33 +229,38 @@ if __name__ == "__main__":
 		model = train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs, window_size, stride, test_set_size, embed, mode, log, label_table, dataset_test = True, tr_table = test_table, val_table = validation_table)
 		device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-		dataset_test_results = None
+		dataset_test_results = pd.DataFrame()
 		try:
 			dataset_test_results = pd.read_csv("./ds_tst.csv")
 		except FileNotFoundError:
 			print("Dataset Testing First Initialization")
 
 		if dataset_test_results.empty:
-			dataset_test_results = pd.DataFrame(columns=["Name", "Label", "Corrupted", "Accuracies", "Trials"]).set_index("Name")
+			dataset_test_results = pd.DataFrame(columns=["Name", "Label", "Corrupted", "Accuracies", "Trials"])
 
-		for sample in validation_table.iloc:
-			#TODO corruption
-			corrupt = False
+		try:
+			for index, row in validation_table.iterrows():
+				#TODO corruption
+				corrupt = False
 
-			valid_loader = init_loader(sample, batch_size)[1]
-			acc, pre, rec, f1 = eval_model(model, valid_loader, device)
-			if acc == 0:
-				acc = -1
+				valid_sample = ExeDataset([index], data_path, [row['ground_truth']], first_n_byte)
+				valid_loader = DataLoader(valid_sample, batch_size=batch_size,drop_last=False)
 
-			if not dataset_test_results.isin([sample[0]]):
-				dataset_test_results.loc[len(dataset_test_results)] = [sample[0], sample[1], corrupt, acc, 1]
-			else:
-				accuracies = dataset_test_results.at[sample[0], "Accuracies"]
-				dataset_test_results.set_value(sample[0], "Accuracies", accuracies + acc)
-				trials = dataset_test_results.at[sample[0], "Trials"]
-				dataset_test_results.set_value(sample[0], "Trials", trials + 1)
+				acc, pre, rec, f1 = eval_model(model, valid_loader, device)
+				if acc == 0:
+					acc = -1
 
-		dataset_test_results.to_csv("./ds_tst.csv")
+				if index not in dataset_test_results.index:
+					dataset_test_results.loc[len(dataset_test_results)] = [index, row['ground_truth'], corrupt, acc, 1]
+				else:
+					accuracies = dataset_test_results.at[index, "Accuracies"]
+					dataset_test_results.set_value(index, "Accuracies", accuracies + acc)
+					trials = dataset_test_results.at[index, "Trials"]
+					dataset_test_results.set_value(index, "Trials", trials + 1)
+		except KeyboardInterrupt:
+			print("Interrupt")
+		finally:
+			dataset_test_results.to_csv("./ds_tst.csv")
 
 		# exclusion_threshold = -0.005
 		# excluded_set_indices = []

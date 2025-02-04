@@ -123,19 +123,30 @@ def train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs
 	else:
 		print("CUDA is not available. Training on CPU.")
 
-	if os.path.exists(model_path) and os.path.exists(optimizer_path):
-		print("Loading saved model and optimizer state...")
-		model.load_state_dict(torch.load(model_path))
-		optimizer.load_state_dict(torch.load(optimizer_path))
-	else:
-		print("No saved model found, training from scratch...")
+	if not dataset_test:
+		if os.path.exists(model_path) and os.path.exists(optimizer_path):
+			print("Loading saved model and optimizer state...")
+			model.load_state_dict(torch.load(model_path))
+			optimizer.load_state_dict(torch.load(optimizer_path))
+		else:
+			print("No saved model found, training from scratch...")
 
 	# ---------------
 
 	try:
 		best_model = train_model(model, criterion, optimizer, device, epochs, train_loader, valid_loader, log=log)
+		if not test_set_size == 1 and not dataset_test:
+			torch.save(model.state_dict(), model_path)
+			torch.save(optimizer.state_dict(), optimizer_path)
+
+			print("Model and optimizer state saved.")
 	except KeyboardInterrupt:
 		print("interrupted")
+		if not test_set_size == 1 and not dataset_test:
+			torch.save(model.state_dict(), model_path)
+			torch.save(optimizer.state_dict(), optimizer_path)
+
+			print("Model and optimizer state saved.")
 	except RuntimeError as e:
 		print(str(e))
 	# print("\n!!!!!!!\nSWITCH TO CPU\n!!!!!!!\n")
@@ -152,12 +163,6 @@ def train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs
 	finally:
 		if log:
 			log.close()
-
-		if not test_set_size == 1 and not dataset_test:
-			torch.save(model.state_dict(), model_path)
-			torch.save(optimizer.state_dict(), optimizer_path)
-
-			print("Model and optimizer state saved.")
 	return model
 
 if __name__ == "__main__":

@@ -1,0 +1,2 @@
+Epoch accuracy is 0.968, precision is 0.519, Recall is 0.519, F1 is 0.519.
+python3 main.py 256 256 0.25 0.5 32 maltf

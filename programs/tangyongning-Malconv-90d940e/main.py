@@ -200,7 +200,7 @@ if __name__ == "__main__":
 
 	if len(sys.argv) == 2:
 		dataset_test = bool(sys.argv[1])
-	elif len(sys.argv) == 7:
+	elif len(sys.argv) >= 7:
 		window_size = int(sys.argv[1])
 		stride = int(sys.argv[2])
 		test_set_size = float(sys.argv[3])
@@ -208,8 +208,12 @@ if __name__ == "__main__":
 		embed = int(sys.argv[5])
 		mode = sys.argv[6]
 
-		pth_start = './'
+		pth_start = './maltf_gridsearch_2-4-25/'
 		multi_train = False
+		if len(sys.argv) >= 8:
+			multi_train = bool(sys.argv[7])
+
+			sys.argv = sys.argv[:6]
 
 		if multi_train:
 			model_path = pth_start+'malconv_model_'+str(sys.argv)+'_mlionestest.pth'
@@ -267,6 +271,7 @@ if __name__ == "__main__":
 		finally:
 			dataset_test_results.to_csv("./ds_tst.csv")
 
+		# #first pass shapely
 		# exclusion_threshold = -0.005
 		# excluded_set_indices = []
 		#

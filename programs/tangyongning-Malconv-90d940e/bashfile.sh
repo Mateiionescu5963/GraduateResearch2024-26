@@ -1,12 +1,15 @@
 test_set=0.25
+mal_ben=0.5
+#window_size=256
+#stride=256
+#embed=32
+mode="maltf"
 
-window_size=256
-stride=256
-embed=32
-mode="mallstm"
-
-python3 main.py $window_size $stride "0.25" "0.5" $embed $mode 
-for mal_ben in $(seq 0.01 0.01 0.99); do
-	python3 main.py $window_size $stride "1" $mal_ben $embed $mode 
+for window_size in $(seq 64 64 512); do
+	for stride in $(seq 64 64 $window_size); do
+		for embed in $(seq 4 4 64); do
+			python3 main.py $window_size $stride $test_set $mal_ben $embed $mode "True"
+		done
+	done
 done
 

@@ -231,6 +231,9 @@ if __name__ == "__main__":
 
 
 	if dataset_test:
+		test_set_size = 0.5
+		set_size = 0.2
+
 		test_table, validation_table = spl(label_table, test_size=test_set_size)
 		test_table = test_table.sample(frac=set_size)
 		validation_table = validation_table.sample(frac=set_size)
@@ -240,12 +243,13 @@ if __name__ == "__main__":
 
 		dataset_test_results = pd.DataFrame()
 		try:
-			dataset_test_results = pd.read_csv("./ds_tst.csv")
+			dataset_test_results = pd.read_csv("./ds_tst.csv", index_col = 0)
 		except FileNotFoundError:
 			print("Dataset Testing First Initialization")
 
 		if dataset_test_results.empty:
 			dataset_test_results = pd.DataFrame(columns=["Name", "Label", "Corrupted", "Accuracies", "Trials"])
+			dataset_test_results.set_index("Name", inplace = True)
 
 		try:
 			for index, row in validation_table.iterrows():
@@ -260,7 +264,7 @@ if __name__ == "__main__":
 					acc = -1
 
 				if index not in dataset_test_results.index:
-					dataset_test_results.loc[len(dataset_test_results)] = [index, row['ground_truth'], corrupt, acc, 1]
+					dataset_test_results.loc[index] = [row['ground_truth'], corrupt, acc, 1]
 				else:
 					accuracies = dataset_test_results.at[index, "Accuracies"]
 					dataset_test_results.set_value(index, "Accuracies", accuracies + acc)

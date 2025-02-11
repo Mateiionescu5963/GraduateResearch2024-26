@@ -4,6 +4,37 @@ import sys
 import json
 
 import pandas as pd
+import numpy as np
+from itertools import combinations as comb
+import math
+
+def v_function(set, mode):
+    assert(type(set) == list)
+    if len(set) == 0:
+        return 0
+    elif mode.lower() == "experimental":
+        dataset_test_results = pd.read_csv("./ds_tst.csv", index_col=0)
+        compliment_df = dataset_test_results.drop(set)
+        df = dataset_test_results[~dataset_test_results.index.isin(compliment_df.index)]
+        scores = df["Accuracies"].to_numpy() / df["Trials"].to_numpy()
+        return sum(scores)
+    else:
+        #TODO other modes
+        raise KeyError("No such mode: "+str(mode))
+
+
+def shapely_value(samples, item, value_mode = "experimental", subset_limit_frac = 0.75):
+    shapely = 0
+    n = len(samples)
+
+    min_set_size = int(n * subset_limit_frac)
+    for i in range(min_set_size, len(samples)):
+        subsets = list(comb(samples, i))
+        for subset in subsets:
+            S = len(subset)
+            shapely += ((math.factorial(S) * math.factorial(n - S - 1)) / math.factorial(n)) * (v_function(list(subset) + list(item), value_mode) - v_function(list(subset), value_mode))
+
+    return shapely
 
 def extract_scores(path):
     f = open(path, "r")

@@ -97,7 +97,12 @@ if __name__ == "__main__":
                     name_split[i] = float(v)
 
             arr = analysis_log.get(k)
-            df.loc[len(df)] = name_split + arr
+            try:
+                df.loc[len(df)] = name_split + arr
+            except ValueError:
+                name_split.append("unlabeled")
+                df.loc[len(df)] = name_split + arr
+
 
         # skip 1.0 accuracy (assume methodological failure for now)
         #df = df[df["acc"] < 1.0]

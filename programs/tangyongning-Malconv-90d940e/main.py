@@ -178,14 +178,14 @@ if __name__ == "__main__":
 	batch_size = 1
 	epochs = 10
 
-	#LOG: Best performance achieved at 99.6% acc w/ 50.7% F1 with:
-	# win_size = 256
-	# stride = 256
-	# test_set_size = 0.25 -- and retest w/ = 1
+	#LOG: Best performance achieved at 99.9% acc w/ 50.8% F1 with:
+	# win_size = 128
+	# stride = 64
+	# test_set_size = 0.25 -- and retest at 1.0 gives 99.5% accuracy w/ 49.4% F1
 	# mal_benign_ratio = 0.5 (by heuristic)
-	# embed = 32
-	# mode = "MalLSTM"
-	# ON/IN: 12-2-24
+	# embed = 24
+	# mode = "MalTF"
+	# ON/IN: 2-4-25
 
 	window_size = 256
 	stride = window_size
@@ -204,6 +204,8 @@ if __name__ == "__main__":
 		window_size = int(sys.argv[1])
 		stride = int(sys.argv[2])
 		test_set_size = float(sys.argv[3])
+		if test_set_size == 1.0:
+			sys.argv[3] = "0.25"
 		mal_benign_ratio = float(sys.argv[4])
 		embed = int(sys.argv[5])
 		mode = sys.argv[6]
@@ -213,7 +215,7 @@ if __name__ == "__main__":
 		if len(sys.argv) >= 8:
 			multi_train = bool(sys.argv[7])
 
-			sys.argv = sys.argv[:6]
+			sys.argv = sys.argv[:7]
 
 		if multi_train:
 			model_path = pth_start+'malconv_model_'+str(sys.argv)+'_mlionestest.pth'
@@ -267,12 +269,13 @@ if __name__ == "__main__":
 					dataset_test_results.loc[index] = [row['ground_truth'], corrupt, acc, 1]
 				else:
 					accuracies = dataset_test_results.at[index, "Accuracies"]
-					dataset_test_results.set_value(index, "Accuracies", accuracies + acc)
+					dataset_test_results.at[index, "Accuracies"] = accuracies + acc
 					trials = dataset_test_results.at[index, "Trials"]
-					dataset_test_results.set_value(index, "Trials", trials + 1)
+					dataset_test_results.at[index, "Trials"] = trials + 1
 		except KeyboardInterrupt:
 			print("Interrupt")
 		finally:
+			dataset_test_results.sort_values(by = ["Trials"], ascending = False)
 			dataset_test_results.to_csv("./ds_tst.csv")
 
 		# #first pass shapely

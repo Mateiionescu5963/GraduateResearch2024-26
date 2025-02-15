@@ -108,19 +108,30 @@ if __name__ == "__main__":
             shapely.append(shapely_value(current, s.index.to_list()))
             if not m_index:
                 m_index = 0
-            elif shapely[m_index] <= shapely[len(shapely) - 1]:
+            elif shapely[m_index] >= shapely[len(shapely) - 1]:
                 m_index = len(shapely) - 1
         print("]", flush = True)
 
-        f = open("./shapely_logs/shapely_log_"+datetime.now().strftime("%Y-%m-%d_%H-%M-%S")+".txt", "w")
-        pd.set_option("display.max_colwidth", None)
-        pd.set_option("display.max_columns", None)
-        f.write(str(label_sets[m_index]))
-        f.write("\n----------------\n")
-        f.write(str(label_sets))
-        f.write("\n\n")
-        f.write(json.dumps(shapely))
-        f.close()
+        now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        path = "./shapely_logs/shapely_log_"+now+".csv"
+
+        df = pd.DataFrame(columns=["Name", "Subset_ID", "Shapely_Value"])
+        df.set_index("Name", inplace=True)
+        for i, s in enumerate(label_sets):
+            for sample in s.index:
+                df.loc[len(df)] = [sample, i, shapely[i]]
+
+        df.sort_values(by=["Subset_ID"], ascending=False)
+        df.to_csv("./ds_tst.csv")
+        # f = open(path, "w")
+        # pd.set_option("display.max_colwidth", None)
+        # pd.set_option("display.max_columns", None)
+        # f.write(str(label_sets[m_index]))
+        # f.write("\n----------------\n")
+        # f.write(str(label_sets))
+        # f.write("\n\n")
+        # f.write(json.dumps(shapely))
+        # f.close()
 
     elif args[2] == "final":
         assert(len(analysis_log.keys()) > 0)

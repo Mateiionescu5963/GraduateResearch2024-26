@@ -87,12 +87,15 @@ if __name__ == "__main__":
     except FileNotFoundError:
         print("No previous analysis log: starting new")
 
-    if args[2] == "shapely":
+    if args[2].split("_")[0] == "shapely":
         label_table = pd.read_csv('../../data/data.csv', header=None, index_col=0).rename(columns={1: 'ground_truth'}).groupby(level=0).last().sample(frac = 1)
         #create a number of subsets equal to the sqrt of the full dataset size
         n = len(label_table)
         #subset_size = min(int(np.sqrt(n)/ 10), n)
         subset_size = min(10, n)
+
+        if len(args[2].split("_")) > 1:
+            subset_size = min(int(args[2].split("_")[1]), n)
         print("Subset Count is: "+str(subset_size))
 
         label_sets = np.array_split(label_table, subset_size)
@@ -119,7 +122,7 @@ if __name__ == "__main__":
         df.set_index("Name", inplace=True)
         for i, s in enumerate(label_sets):
             for sample in s.index:
-                df.loc[len(df)] = [sample, i, shapely[i]]
+                df.loc[sample] = [i, shapely[i]]
 
         df.sort_values(by=["Subset_ID"], ascending=False)
         df.to_csv("./ds_tst.csv")

@@ -2,6 +2,7 @@
 
 import sys
 import json
+import warnings
 
 import pandas as pd
 import numpy as np
@@ -31,9 +32,11 @@ def shapely_value(samples, item, value_mode = "experimental", subset_limit_frac 
     shapely = 0
     n = len(samples)
 
-    for i in range(n):
+    for i in range(1, n):
+        print("/", end="", flush = True)
         subsets = list(comb(samples, i))
         for subset in subsets:
+            print(".", end="", flush = True)
             S = len(subset)
             full = list(chain.from_iterable(subset))
             shapely += ((math.factorial(S) * math.factorial(n - S - 1)) / math.factorial(n)) * (v_function(list(full) + list(item), value_mode) - v_function(list(full), value_mode))
@@ -53,6 +56,7 @@ def extract_scores(path):
     return results
 
 if __name__ == "__main__":
+    warnings.filterwarnings("ignore")
     print(".", end = "")
     args = None
     if len(sys.argv) < 3:
@@ -87,18 +91,26 @@ if __name__ == "__main__":
         label_table = pd.read_csv('../../data/data.csv', header=None, index_col=0).rename(columns={1: 'ground_truth'}).groupby(level=0).last().sample(frac = 1)
         #create a number of subsets equal to the sqrt of the full dataset size
         n = len(label_table)
-        subset_size = int(np.sqrt(n))
-        print("Subset Size is: "+str(subset_size))
+        #subset_size = min(int(np.sqrt(n)/ 10), n)
+        subset_size = min(10, n)
+        print("Subset Count is: "+str(subset_size))
 
         label_sets = np.array_split(label_table, subset_size)
         shapely = []
         m_index = None
+        print("[", end = "", flush = True)
         for s in label_sets:
-            shapely.append(shapely_value(label_sets, s.index.to_list()))
+            print("-", end="", flush = True)
+            current = []
+            for si in label_sets:
+                if not si.equals(s):
+                    current.append(si)
+            shapely.append(shapely_value(current, s.index.to_list()))
             if not m_index:
                 m_index = 0
             elif shapely[m_index] <= shapely[len(shapely) - 1]:
                 m_index = len(shapely) - 1
+        print("]", flush = True)
 
         f = open("./shapely_logs/shapely_log_"+datetime.now().strftime("%Y-%m-%d_%H-%M-%S")+".txt", "w")
         pd.set_option("display.max_colwidth", None)

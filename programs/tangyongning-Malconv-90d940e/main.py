@@ -233,8 +233,8 @@ if __name__ == "__main__":
 
 
 	if dataset_test:
-		test_set_size = 0.5
-		set_size = 0.2
+		#test_set_size = 0.5
+		#set_size = 0.2
 
 		test_table, validation_table = spl(label_table, test_size=test_set_size)
 		test_table = test_table.sample(frac=set_size)

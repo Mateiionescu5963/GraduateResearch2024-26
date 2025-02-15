@@ -6,17 +6,21 @@ import json
 import pandas as pd
 import numpy as np
 from itertools import combinations as comb
+from itertools import chain
 import math
+from datetime import datetime
 
 def v_function(set, mode):
     assert(type(set) == list)
     if len(set) == 0:
+        #print("zero")
         return 0
     elif mode.lower() == "experimental":
         dataset_test_results = pd.read_csv("./ds_tst.csv", index_col=0)
-        compliment_df = dataset_test_results.drop(set)
+        compliment_df = dataset_test_results.drop(set, errors = "ignore")
         df = dataset_test_results[~dataset_test_results.index.isin(compliment_df.index)]
         scores = df["Accuracies"].to_numpy() / df["Trials"].to_numpy()
+        #print(scores)
         return sum(scores)
     else:
         #TODO other modes
@@ -27,12 +31,12 @@ def shapely_value(samples, item, value_mode = "experimental", subset_limit_frac 
     shapely = 0
     n = len(samples)
 
-    min_set_size = int(n * subset_limit_frac)
-    for i in range(min_set_size, len(samples)):
+    for i in range(n):
         subsets = list(comb(samples, i))
         for subset in subsets:
             S = len(subset)
-            shapely += ((math.factorial(S) * math.factorial(n - S - 1)) / math.factorial(n)) * (v_function(list(subset) + list(item), value_mode) - v_function(list(subset), value_mode))
+            full = list(chain.from_iterable(subset))
+            shapely += ((math.factorial(S) * math.factorial(n - S - 1)) / math.factorial(n)) * (v_function(list(full) + list(item), value_mode) - v_function(list(full), value_mode))
 
     return shapely
 
@@ -79,7 +83,34 @@ if __name__ == "__main__":
     except FileNotFoundError:
         print("No previous analysis log: starting new")
 
-    if args[2] == "final":
+    if args[2] == "shapely":
+        label_table = pd.read_csv('../../data/data.csv', header=None, index_col=0).rename(columns={1: 'ground_truth'}).groupby(level=0).last().sample(frac = 1)
+        #create a number of subsets equal to the sqrt of the full dataset size
+        n = len(label_table)
+        subset_size = int(np.sqrt(n))
+        print("Subset Size is: "+str(subset_size))
+
+        label_sets = np.array_split(label_table, subset_size)
+        shapely = []
+        m_index = None
+        for s in label_sets:
+            shapely.append(shapely_value(label_sets, s.index.to_list()))
+            if not m_index:
+                m_index = 0
+            elif shapely[m_index] <= shapely[len(shapely) - 1]:
+                m_index = len(shapely) - 1
+
+        f = open("./shapely_logs/shapely_log_"+datetime.now().strftime("%Y-%m-%d_%H-%M-%S")+".txt", "w")
+        pd.set_option("display.max_colwidth", None)
+        pd.set_option("display.max_columns", None)
+        f.write(str(label_sets[m_index]))
+        f.write("\n----------------\n")
+        f.write(str(label_sets))
+        f.write("\n\n")
+        f.write(json.dumps(shapely))
+        f.close()
+
+    elif args[2] == "final":
         assert(len(analysis_log.keys()) > 0)
         # pandas dataframe table for fast sorting and display
         df = pd.DataFrame(columns = ["window", "stride", "test_set", "mal-benign-ratio", "embed", "acc", "precision", "recall", "F1"])

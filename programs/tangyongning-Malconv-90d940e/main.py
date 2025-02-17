@@ -187,12 +187,19 @@ if __name__ == "__main__":
 	# mode = "MalTF"
 	# ON/IN: 2-4-25
 
-	window_size = 256
-	stride = window_size
+	#log best MalLSTM hyperparam:
+	# size = 256
+	# stride = 256
+	# test_set = .25
+	# mal_benign_ratio = 0.5
+	# embed = 32
+
+	window_size = 128
+	stride = 64
 	test_set_size = 0.25
 	mal_benign_ratio = 0.5 #1 == all malware; 0 == all benign
-	embed = 32
-	mode = "mallstm"
+	embed = 24
+	mode = "maltf"
 
 	#dataset = 1
 	log = None
@@ -210,7 +217,7 @@ if __name__ == "__main__":
 		embed = int(sys.argv[5])
 		mode = sys.argv[6]
 
-		pth_start = './maltf_gridsearch_2-4-25/'
+		pth_start = './maltf-gridsearch_2-4-25/'
 		multi_train = False
 		if len(sys.argv) >= 8:
 			multi_train = bool(sys.argv[7])

@@ -17,6 +17,7 @@ def v_function(set, mode):
         #print("zero")
         return 0
     elif mode.lower() == "experimental":
+        #print(",", end = "", flush = True)
         dataset_test_results = pd.read_csv("./ds_tst.csv", index_col=0)
         compliment_df = dataset_test_results.drop(set, errors = "ignore")
         df = dataset_test_results[~dataset_test_results.index.isin(compliment_df.index)]

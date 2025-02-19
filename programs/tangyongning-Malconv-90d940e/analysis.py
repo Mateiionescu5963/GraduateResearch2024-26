@@ -10,6 +10,7 @@ from itertools import combinations as comb
 from itertools import chain
 import math
 from datetime import datetime
+import time
 
 def v_function(set, mode):
     assert(type(set) == list)
@@ -18,7 +19,13 @@ def v_function(set, mode):
         return 0
     elif mode.lower() == "experimental":
         #print(",", end = "", flush = True)
-        dataset_test_results = pd.read_csv("./ds_tst.csv", index_col=0)
+        dataset_test_results = pd.DataFrame()
+        while dataset_test_results.empty:
+            try:
+                dataset_test_results = pd.read_csv("./ds_tst_stable.csv", index_col=0)
+            except pd.errors.EmptyDataError as e:
+                print("collision", end="", flush = True)
+                time.sleep(1)
         compliment_df = dataset_test_results.drop(set, errors = "ignore")
         df = dataset_test_results[~dataset_test_results.index.isin(compliment_df.index)]
         scores = df["Accuracies"].to_numpy() / df["Trials"].to_numpy()
@@ -33,7 +40,9 @@ def shapely_value(samples, item, value_mode = "experimental", subset_limit_frac 
     shapely = 0
     n = len(samples)
 
-    for i in range(1, n):
+    low_bound = min(n, max(1, int(math.sqrt(n))))
+
+    for i in range(low_bound, n):
         print("/", end="", flush = True)
         subsets = list(comb(samples, i))
         for subset in subsets:

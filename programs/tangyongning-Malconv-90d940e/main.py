@@ -204,9 +204,11 @@ if __name__ == "__main__":
 	#dataset = 1
 	log = None
 	dataset_test = False
+	corruption = False
 
-	if len(sys.argv) == 2:
+	if len(sys.argv) == 3:
 		dataset_test = bool(sys.argv[1])
+		corruption = bool(sys.argv[2])
 	elif len(sys.argv) >= 7:
 		window_size = int(sys.argv[1])
 		stride = int(sys.argv[2])
@@ -240,8 +242,8 @@ if __name__ == "__main__":
 
 
 	if dataset_test:
-		#test_set_size = 0.5
-		#set_size = 0.2
+		test_set_size = 0.5
+		set_size = 0.2
 
 		test_table, validation_table = spl(label_table, test_size=test_set_size)
 		test_table = test_table.sample(frac=set_size)
@@ -261,12 +263,23 @@ if __name__ == "__main__":
 			dataset_test_results.set_index("Name", inplace = True)
 
 		try:
+			corrupt_table = pd.DataFrame()
+
+			if corruption:
+				corrupt_table = pd.read_csv("./corruption.csv", index_col=0)
+
 			for index, row in validation_table.iterrows():
-				#TODO corruption
+				valid_loader = None
 				corrupt = False
 
-				valid_sample = ExeDataset([index], data_path, [row['ground_truth']], first_n_byte)
-				valid_loader = DataLoader(valid_sample, batch_size=batch_size,drop_last=False)
+				if corruption:
+					if index in corrupt_table.index:
+						corrupt = True
+						valid_sample = ExeDataset([index], data_path, [1 if row['ground_truth'] == 0 else 0], first_n_byte)
+						valid_loader = DataLoader(valid_sample, batch_size=batch_size, drop_last=False)
+					else:
+						valid_sample = ExeDataset([index], data_path, [row['ground_truth']], first_n_byte)
+						valid_loader = DataLoader(valid_sample, batch_size=batch_size,drop_last=False)
 
 				acc, pre, rec, f1 = eval_model(model, valid_loader, device)
 				if acc == 0:
@@ -279,6 +292,7 @@ if __name__ == "__main__":
 					dataset_test_results.at[index, "Accuracies"] = accuracies + acc
 					trials = dataset_test_results.at[index, "Trials"]
 					dataset_test_results.at[index, "Trials"] = trials + 1
+					dataset_test_results.at[index, "Corrupted"] = corrupt
 		except KeyboardInterrupt:
 			print("Interrupt")
 		finally:

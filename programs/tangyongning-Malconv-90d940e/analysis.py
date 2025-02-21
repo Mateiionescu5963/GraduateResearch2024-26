@@ -135,7 +135,7 @@ if __name__ == "__main__":
                 df.loc[sample] = [i, shapely[i]]
 
         df.sort_values(by=["Subset_ID"], ascending=False)
-        df.to_csv("./ds_tst.csv")
+        df.to_csv(path)
         # f = open(path, "w")
         # pd.set_option("display.max_colwidth", None)
         # pd.set_option("display.max_columns", None)

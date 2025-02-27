@@ -1,4 +1,4 @@
-for i in $(seq 1 25); do
+while [ True ]; do
 	python3 main.py "True" "True"
 done
 

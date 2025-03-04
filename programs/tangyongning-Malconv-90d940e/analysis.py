@@ -3,6 +3,7 @@
 import sys
 import json
 import warnings
+import os
 
 import pandas as pd
 import numpy as np
@@ -22,7 +23,7 @@ def v_function(set, mode):
         dataset_test_results = pd.DataFrame()
         while dataset_test_results.empty:
             try:
-                dataset_test_results = pd.read_csv("./ds_tst_stable.csv", index_col=0)
+                dataset_test_results = pd.read_csv("./ds_tst.csv", index_col=0)
             except pd.errors.EmptyDataError as e:
                 print("collision", end="", flush = True)
                 time.sleep(1)
@@ -36,11 +37,13 @@ def v_function(set, mode):
         raise KeyError("No such mode: "+str(mode))
 
 
-def shapely_value(samples, item, value_mode = "experimental", subset_limit_frac = 0.75):
+def shapely_value(samples, item, value_mode = "experimental", lower_bound = None):
     shapely = 0
     n = len(samples)
 
-    low_bound = min(n, max(1, int(math.sqrt(n))))
+    low_bound = 1
+    if lower_bound:
+        low_bound = min(n, max(1, int(lower_bound(n))))
 
     for i in range(low_bound, n):
         print("/", end="", flush = True)
@@ -67,6 +70,7 @@ def extract_scores(path):
 
 if __name__ == "__main__":
     warnings.filterwarnings("ignore")
+    pd.set_option('display.max_rows', None)
     print(".", end = "")
     args = None
     if len(sys.argv) < 3:
@@ -97,7 +101,47 @@ if __name__ == "__main__":
     except FileNotFoundError:
         print("No previous analysis log: starting new")
 
-    if args[2].split("_")[0] == "shapely":
+
+    if args[2] == "analyze_shapely":
+        try:
+            analysis_log = pd.read_csv("shapely_analysis.csv", index_col=0)
+        except FileNotFoundError:
+            print("Starting new shapely analysis log")
+            analysis_log = pd.read_csv('../../data/data.csv', header=None, index_col=0).rename(columns={1: 'ground_truth'}).groupby(level=0).last().sample(frac = 1)
+            analysis_log["Corrupt"] = False
+            try:
+                corruption = pd.read_csv("./corruption.csv", index_col=0)
+                for index, row in corruption.iterrows():
+                    analysis_log.at[index, "Corrupt"] = True
+            except FileNotFoundError:
+                print("No corruption file found.")
+        finally:
+            analysis_log["Shapely"] = 0
+
+        path = "./shapely_logs"
+
+        c = 0
+        for filename in os.listdir(path):
+            print(".", end="", flush=True)
+            fpath = os.path.join(path, filename)
+            if os.path.isfile(fpath):
+                if fpath[-4:] == ".csv":
+                    shap = pd.read_csv(fpath, index_col=0)
+                    avg = (shap["Shapely_Value"].sum()) / len(shap)
+
+                    for index, row in shap.iterrows():
+                        analysis_log.at[index, "Shapely"] += (shap.at[index, "Shapely_Value"] / avg)
+
+                    c += 1
+
+        analysis_log["Shapely"] /= c
+        analysis_log.sort_values(by = ["Shapely"], ascending = False)
+        print(analysis_log)
+
+        analysis_log.to_csv("shapely_analysis.csv")
+        analysis_log.to_csv("shapely_analysis_bak_"+datetime.now().strftime("%Y-%m-%d_%H-%M-%S")+".csv")
+
+    elif args[2].split("_")[0] == "shapely":
         label_table = pd.read_csv('../../data/data.csv', header=None, index_col=0).rename(columns={1: 'ground_truth'}).groupby(level=0).last().sample(frac = 1)
         #create a number of subsets equal to the sqrt of the full dataset size
         n = len(label_table)
@@ -182,7 +226,6 @@ if __name__ == "__main__":
         #df = df[df["window"] > 500]
 
         #sort by Accuracy and F1 and display
-        pd.set_option('display.max_rows', None)
         df = df.sort_values(by = ["acc", "F1"], ascending = False)
         print(df)
     else:

@@ -38,13 +38,11 @@ def v_function(set, mode):
         raise KeyError("No such mode: "+str(mode))
 
 
-def shapely_value(samples, item, value_mode = "experimental", lower_bound = None):
+def shapely_value(samples, item, value_mode = "experimental"):
     shapely = 0
     n = len(samples)
 
-    low_bound = 1
-    if lower_bound:
-        low_bound = min(n, max(1, int(lower_bound(n))))
+    low_bound = min(n, max(1, int(math.sqrt(n))))
 
     for i in range(low_bound, n):
         print("/", end="", flush = True)
@@ -148,19 +146,12 @@ if __name__ == "__main__":
         n = len(label_table)
         #subset_size = min(int(np.sqrt(n)/ 10), n)
         subset_size = min(10, n)
-        lower = None
 
         if len(args[2].split("_")) > 1:
             subset_size = min(int(args[2].split("_")[1]), n)
             if len(args[2].split("_")) > 2:
-                lower = args[2].split("_")[2]
-                lower = lower.split(".")
-                try:
-                    module = importlib.import_module(lower[0])
-                    lower = getattr(module, lower[1])
-                except:
-                    print("invalid function")
-                    lower = None
+                label_table = label_table.sample(frac = float(args[2].split("_")[2]))
+
         print("Subset Count is: "+str(subset_size))
 
         label_sets = np.array_split(label_table, subset_size)
@@ -173,7 +164,7 @@ if __name__ == "__main__":
             for si in label_sets:
                 if not si.equals(s):
                     current.append(si)
-            shapely.append(shapely_value(current, s.index.to_list(), lower_bound=lower))
+            shapely.append(shapely_value(current, s.index.to_list()))
             if not m_index:
                 m_index = 0
             elif shapely[m_index] >= shapely[len(shapely) - 1]:

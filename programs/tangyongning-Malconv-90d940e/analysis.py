@@ -31,6 +31,8 @@ def v_function(set, mode):
         compliment_df = dataset_test_results.drop(set, errors = "ignore")
         df = dataset_test_results[~dataset_test_results.index.isin(compliment_df.index)]
         scores = df["Accuracies"].to_numpy() / df["Trials"].to_numpy()
+        scores = scores + 1
+        scores = scores / 2
         #print(scores)
         return sum(scores)
     else:
@@ -129,11 +131,12 @@ if __name__ == "__main__":
                     avg = (shap["Shapely_Value"].sum()) / len(shap)
 
                     for index, row in shap.iterrows():
-                        analysis_log.at[index, "Shapely"] += (shap.at[index, "Shapely_Value"] / avg)
+                        #analysis_log.at[index, "Shapely"] += (shap.at[index, "Shapely_Value"] / avg)
+                        analysis_log.at[index, "Shapely"] += shap.at[index, "Shapely_Value"]
 
                     c += 1
 
-        analysis_log["Shapely"] /= c
+        #analysis_log["Shapely"] /= c
         analysis_log.sort_values(by = ["Shapely"], ascending = False)
         print(analysis_log)
 

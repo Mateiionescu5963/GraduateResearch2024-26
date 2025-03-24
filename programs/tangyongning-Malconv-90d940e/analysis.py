@@ -4,6 +4,7 @@ import sys
 import json
 import warnings
 import os
+import copy
 
 import pandas as pd
 import numpy as np
@@ -102,8 +103,42 @@ if __name__ == "__main__":
     except FileNotFoundError:
         print("No previous analysis log: starting new")
 
+    if args[2] == "shapctrl":
+        full_set = pd.read_csv('../../data/data.csv', header=None, index_col=0).rename(columns={1: 'ground_truth'}).groupby(level=0).last().sample(frac = 1)
+        corrupt = pd.read_csv("./corruption.csv", index_col=0)
+        true_set = full_set.drop(corrupt, errors="ignore")
 
-    if args[2] == "analyze_shapely":
+        group_count = min(10, len(true_set))
+        groups = np.array_split(true_set, group_count)
+
+        bad_boys = corrupt.sample(n = len(groups[0]) // 2)
+
+        for n in range(group_count):
+            label_sets = copy.deepcopy(groups)
+            label_sets[n] = label_sets[n].sample(frac=0.5) + bad_boys
+
+            shapely = []
+            print("[", end="", flush=True)
+            for s in label_sets:
+                print("-", end="", flush=True)
+                current = []
+                for si in label_sets:
+                    if not si.equals(s):
+                        current.append(si)
+                shapely.append(shapely_value(current, s.index.to_list()))
+            print("]", flush=True)
+
+            path = "./shapctrl_logs/shapely_log_" + str(n) + ".csv"
+
+            df = pd.DataFrame(columns=["Subset_ID", "Shapely_Value"])
+            df.set_index("Subset_ID", inplace=True)
+            for i, s in enumerate(label_sets):
+                df.loc[i] = [shapely[i]]
+
+            df.to_csv(path)
+
+
+    elif args[2] == "analyze_shapely":
         try:
             analysis_log = pd.read_csv("shapely_analysis.csv", index_col=0)
         except FileNotFoundError:
@@ -159,7 +194,6 @@ if __name__ == "__main__":
 
         label_sets = np.array_split(label_table, subset_size)
         shapely = []
-        m_index = None
         print("[", end = "", flush = True)
         for s in label_sets:
             print("-", end="", flush = True)
@@ -168,10 +202,6 @@ if __name__ == "__main__":
                 if not si.equals(s):
                     current.append(si)
             shapely.append(shapely_value(current, s.index.to_list()))
-            if not m_index:
-                m_index = 0
-            elif shapely[m_index] >= shapely[len(shapely) - 1]:
-                m_index = len(shapely) - 1
         print("]", flush = True)
 
         now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -185,15 +215,6 @@ if __name__ == "__main__":
 
         df.sort_values(by=["Subset_ID"], ascending=False)
         df.to_csv(path)
-        # f = open(path, "w")
-        # pd.set_option("display.max_colwidth", None)
-        # pd.set_option("display.max_columns", None)
-        # f.write(str(label_sets[m_index]))
-        # f.write("\n----------------\n")
-        # f.write(str(label_sets))
-        # f.write("\n\n")
-        # f.write(json.dumps(shapely))
-        # f.close()
 
     elif args[2] == "final":
         assert(len(analysis_log.keys()) > 0)

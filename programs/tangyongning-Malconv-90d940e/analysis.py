@@ -104,6 +104,12 @@ if __name__ == "__main__":
         print("No previous analysis log: starting new")
 
     if args[2] == "shapctrl":
+        fraction = 0.5
+        try:
+            fraction = int(args[1])
+        except ValueError:
+            fraction = 0.5
+
         full_set = pd.read_csv('../../data/data.csv', header=None, index_col=0).rename(columns={1: 'ground_truth'}).groupby(level=0).last().sample(frac = 1)
         corrupt = pd.read_csv("./corruption.csv", index_col=0)
         true_set = full_set.drop(corrupt, errors="ignore")
@@ -111,11 +117,17 @@ if __name__ == "__main__":
         group_count = min(10, len(true_set))
         groups = np.array_split(true_set, group_count)
 
-        bad_boys = corrupt.sample(n = len(groups[0]) // 2)
+        bad_boys = corrupt.sample(n = int(len(groups[0]) * fraction)+1)
+
+        df = pd.DataFrame(columns=["Subset_ID"])
+        df.set_index("Subset_ID", inplace=True)
 
         for n in range(group_count):
+            name = "Sv" + str(n)
+            df[name] = -1
+
             label_sets = copy.deepcopy(groups)
-            label_sets[n] = label_sets[n].sample(frac=0.5) + bad_boys
+            label_sets[n] = label_sets[n].sample(frac=fraction) + bad_boys
 
             shapely = []
             print("[", end="", flush=True)
@@ -128,14 +140,14 @@ if __name__ == "__main__":
                 shapely.append(shapely_value(current, s.index.to_list()))
             print("]", flush=True)
 
-            path = "./shapctrl_logs/shapely_log_" + str(n) + ".csv"
 
-            df = pd.DataFrame(columns=["Subset_ID", "Shapely_Value"])
-            df.set_index("Subset_ID", inplace=True)
+
+
             for i, s in enumerate(label_sets):
-                df.loc[i] = [shapely[i]]
+                df.loc[i, name] = [shapely[i]]
 
-            df.to_csv(path)
+        path = "./shapctrl_logs/shapely_ctrl_"+str(fraction)+"_.csv"
+        df.to_csv(path)
 
 
     elif args[2] == "analyze_shapely":

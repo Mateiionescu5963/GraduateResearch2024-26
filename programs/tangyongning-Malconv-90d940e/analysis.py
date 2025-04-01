@@ -144,7 +144,7 @@ if __name__ == "__main__":
 
 
             for i, s in enumerate(label_sets):
-                df.loc[i, name] = [shapely[i]]
+                df.loc[i, name] = shapely[i]
 
         path = "./shapctrl_logs/shapely_ctrl_"+str(fraction)+"_.csv"
         df.to_csv(path)

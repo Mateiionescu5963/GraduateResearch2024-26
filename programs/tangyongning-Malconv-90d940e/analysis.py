@@ -106,7 +106,7 @@ if __name__ == "__main__":
     if args[2] == "shapctrl":
         fraction = 0.5
         try:
-            fraction = int(args[1])
+            fraction = float(args[1])
         except ValueError:
             fraction = 0.5
 

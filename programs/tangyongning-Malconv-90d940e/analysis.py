@@ -127,7 +127,7 @@ if __name__ == "__main__":
             df[name] = -1
 
             label_sets = copy.deepcopy(groups)
-            label_sets[n] = label_sets[n].sample(frac=fraction) + bad_boys
+            label_sets[n] = label_sets[n].sample(frac=1-fraction) + bad_boys
 
             shapely = []
             print("[", end="", flush=True)

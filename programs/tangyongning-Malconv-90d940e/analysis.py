@@ -14,6 +14,7 @@ import math
 from datetime import datetime
 import time
 import importlib
+import random
 
 def v_function(set, mode):
     assert(type(set) == list)
@@ -169,13 +170,23 @@ if __name__ == "__main__":
         path = "./shapely_logs"
 
         c = 0
-        for filename in os.listdir(path):
+        files = os.listdir(path)
+        fraction = 1.0
+        try:
+            fraction = float(args[1])
+        except ValueError:
+            fraction = 1.0
+
+        if fraction < 1 and fraction != 0:
+            files = random.sample(files, int(len(files)*fraction))
+
+        for filename in files:
             print(".", end="", flush=True)
             fpath = os.path.join(path, filename)
             if os.path.isfile(fpath):
                 if fpath[-4:] == ".csv":
                     shap = pd.read_csv(fpath, index_col=0)
-                    avg = (shap["Shapely_Value"].sum()) / len(shap)
+                    #avg = (shap["Shapely_Value"].sum()) / len(shap)
 
                     for index, row in shap.iterrows():
                         #analysis_log.at[index, "Shapely"] += (shap.at[index, "Shapely_Value"] / avg)

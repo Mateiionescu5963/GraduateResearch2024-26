@@ -1,0 +1,16 @@
+#datafiles
+*.csv
+!data.csv
+!corruption.csv
+!ds_tst.csv
+!*bak*.csv
+!shapely_ctrl*.csv
+
+#os
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ethumbs.db
+Thumbs.db

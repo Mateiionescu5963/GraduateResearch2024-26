@@ -6,6 +6,10 @@
 !*bak*.csv
 !shapely_ctrl*.csv
 
+#etc
+*.pyc
+*.pt
+
 #os
 .DS_Store
 .DS_Store?

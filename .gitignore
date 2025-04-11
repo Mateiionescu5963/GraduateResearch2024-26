@@ -2,7 +2,7 @@
 *.csv
 !data.csv
 !corruption.csv
-!ds_tst.csv
+!*ds_tst*.csv
 !*bak*.csv
 !shapely_ctrl*.csv
 

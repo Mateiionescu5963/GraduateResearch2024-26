@@ -255,6 +255,7 @@ if __name__ == "__main__":
 		dataset_test_results = pd.DataFrame()
 		try:
 			dataset_test_results = pd.read_csv("./ds_tst.csv", index_col = 0)
+			dataset_test_results.to_csv("./ds_tst_bak.csv")
 		except FileNotFoundError:
 			print("Dataset Testing First Initialization")
 
@@ -293,11 +294,14 @@ if __name__ == "__main__":
 					trials = dataset_test_results.at[index, "Trials"]
 					dataset_test_results.at[index, "Trials"] = trials + 1
 					dataset_test_results.at[index, "Corrupted"] = corrupt
+
+			dataset_test_results.sort_values(by=["Trials"], ascending=False)
+			dataset_test_results.to_csv("./ds_tst.csv")
 		except KeyboardInterrupt:
 			print("Interrupt")
-		finally:
-			dataset_test_results.sort_values(by = ["Trials"], ascending = False)
-			dataset_test_results.to_csv("./ds_tst.csv")
+		#finally:
+		#	dataset_test_results.sort_values(by = ["Trials"], ascending = False)
+		#	dataset_test_results.to_csv("./ds_tst.csv")
 
 		# #first pass shapely
 		# exclusion_threshold = -0.005

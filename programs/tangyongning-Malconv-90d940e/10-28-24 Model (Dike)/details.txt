@@ -1,3 +1,0 @@
-Epoch accuracy is 0.975, precision is 0.916, Recall is 0.916, F1 is 0.916.
-
-Uses only the DikeDataset training and testing

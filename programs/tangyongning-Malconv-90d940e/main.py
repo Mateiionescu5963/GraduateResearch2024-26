@@ -242,6 +242,12 @@ if __name__ == "__main__":
 
 
 	if dataset_test:
+		corrupt_table = pd.DataFrame()
+
+		if corruption:
+			corrupt_table = pd.read_csv("./corruption.csv", index_col=0)
+			for index, row in corrupt_table.iterrows():
+				label_table.at[index, "ground_truth"] = 1 if row['ground_truth'] == 0 else 0
 		#test_set_size = 0.5
 		#set_size = 0.2
 
@@ -264,23 +270,11 @@ if __name__ == "__main__":
 			dataset_test_results.set_index("Name", inplace = True)
 
 		try:
-			corrupt_table = pd.DataFrame()
-
-			if corruption:
-				corrupt_table = pd.read_csv("./corruption.csv", index_col=0)
-
 			for index, row in validation_table.iterrows():
-				valid_loader = None
-				corrupt = False
+				corrupt = index in corrupt_table.index
 
-				if corruption:
-					if index in corrupt_table.index:
-						corrupt = True
-						valid_sample = ExeDataset([index], data_path, [1 if row['ground_truth'] == 0 else 0], first_n_byte)
-						valid_loader = DataLoader(valid_sample, batch_size=batch_size, drop_last=False)
-					else:
-						valid_sample = ExeDataset([index], data_path, [row['ground_truth']], first_n_byte)
-						valid_loader = DataLoader(valid_sample, batch_size=batch_size,drop_last=False)
+				valid_sample = ExeDataset([index], data_path, [row['ground_truth']], first_n_byte)
+				valid_loader = DataLoader(valid_sample, batch_size=batch_size,drop_last=False)
 
 				acc, pre, rec, f1 = eval_model(model, valid_loader, device)
 				if acc == 0:
@@ -299,57 +293,6 @@ if __name__ == "__main__":
 			dataset_test_results.to_csv("./ds_tst.csv")
 		except KeyboardInterrupt:
 			print("Interrupt")
-		#finally:
-		#	dataset_test_results.sort_values(by = ["Trials"], ascending = False)
-		#	dataset_test_results.to_csv("./ds_tst.csv")
-
-		# #first pass shapely
-		# exclusion_threshold = -0.005
-		# excluded_set_indices = []
-		#
-		# log = open("temp.txt", "w")
-		# train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs, window_size, stride, test_set_size, embed, mode, log, label_table, dataset_test = True)
-		# init_results = extract_scores("temp.txt")
-		#
-		# #shuffle dataset
-		# label_table = label_table.sample(frac = 1)
-		#
-		# #create a number of subsets equal to the sqrt of the full dataset size
-		# n = len(label_table)
-		# subset_size = int(np.sqrt(n))
-		# print("Subset Size is: "+str(subset_size))
-		#
-		# label_sets = np.array_split(label_table, subset_size)
-		#
-		# #for each set, exclude it and train
-		# try:
-		# 	for i, excluded in enumerate(label_sets):
-		# 		test_labels = label_table[~label_table.isin(excluded)].dropna()
-		#
-		# 		log.open("temp.txt", "w")
-		# 		train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs, window_size, stride, test_set_size, embed, mode, log, test_labels, dataset_test=True)
-		#
-		# 		results = extract_scores("temp.txt")
-		#
-		# 		change = init_results[0] - results[0]
-		# 		if change > 0 or change >= exclusion_threshold:
-		# 			excluded_set_indices.append(i)
-		# except Exception as e:
-		# 	print("An exception occurred during processing of exclusions")
-		# 	print(e)
-		# finally:
-		# 	if log:
-		# 		log.close()
-		#
-		# exclusion_zone = None
-		# for index in excluded_set_indices:
-		# 	if exclusion_zone:
-		# 		exclusion_zone = pd.concat([exclusion_zone, label_sets[index]])
-		# 	else:
-		# 		exclusion_zone = label_sets[index]
-		#
-		# if exclusion_zone:
-		# 	exclusion_zone.to_csv('potential_exclusion.csv', index = True)
 	else:
 		train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs, window_size, stride, test_set_size, embed, mode, log, label_table)
 

@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader
 import pandas as pd
 import numpy as np
 from dataset import ExeDataset, init_loader
-from model import MalConv, MalLSTM, CNN_LSTM, MalTF
+from model import MalConv, MalLSTM, MalTF
 from train import train_model, eval_model
 from analysis import extract_scores
 from sklearn.model_selection import train_test_split as spl
@@ -261,7 +261,7 @@ if __name__ == "__main__":
 		dataset_test_results = pd.DataFrame()
 		try:
 			dataset_test_results = pd.read_csv("./ds_tst.csv", index_col = 0)
-			dataset_test_results.to_csv("./ds_tst_bak.csv")
+			#dataset_test_results.to_csv("./ds_tst_bak.csv")
 		except FileNotFoundError:
 			print("Dataset Testing First Initialization")
 

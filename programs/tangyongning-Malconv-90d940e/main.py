@@ -270,6 +270,7 @@ if __name__ == "__main__":
 			dataset_test_results.set_index("Name", inplace = True)
 
 		try:
+			total_acc = 0
 			for index, row in validation_table.iterrows():
 				corrupt = index in corrupt_table.index
 
@@ -279,6 +280,8 @@ if __name__ == "__main__":
 				acc, pre, rec, f1 = eval_model(model, valid_loader, device)
 				if acc == 0:
 					acc = -1
+				else:
+					total_acc += 1
 
 				if index not in dataset_test_results.index:
 					dataset_test_results.loc[index] = [row['ground_truth'], corrupt, acc, 1]
@@ -289,7 +292,11 @@ if __name__ == "__main__":
 					dataset_test_results.at[index, "Trials"] = trials + 1
 					dataset_test_results.at[index, "Corrupted"] = corrupt
 
-			dataset_test_results.sort_values(by=["Trials"], ascending=False)
+			acc_log = pd.read_csv("./acclog.csv")
+			acc_log.loc[len(acc_log)] = [total_acc]
+			acc_log.to_csv("./acclog.csv")
+
+			#dataset_test_results.sort_values(by=["Trials"], ascending=False)
 			dataset_test_results.to_csv("./ds_tst.csv")
 		except KeyboardInterrupt:
 			print("Interrupt")

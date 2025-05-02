@@ -271,6 +271,7 @@ if __name__ == "__main__":
 
 		try:
 			total_acc = 0
+			total_f1 = 0
 			for index, row in validation_table.iterrows():
 				corrupt = index in corrupt_table.index
 
@@ -282,6 +283,7 @@ if __name__ == "__main__":
 					acc = -1
 				else:
 					total_acc += 1
+				total_f1 += f1
 
 				if index not in dataset_test_results.index:
 					dataset_test_results.loc[index] = [row['ground_truth'], corrupt, acc, 1]
@@ -292,8 +294,12 @@ if __name__ == "__main__":
 					dataset_test_results.at[index, "Trials"] = trials + 1
 					dataset_test_results.at[index, "Corrupted"] = corrupt
 
-			acc_log = pd.read_csv("./acclog.csv")
-			acc_log.loc[len(acc_log)] = [total_acc]
+			acc_log = None
+			try:
+				acc_log = pd.read_csv("./acclog.csv")
+			except:
+				acc_log = pd.DataFrame(columns=["acc", "f1"])
+			acc_log.loc[len(acc_log)] = [total_acc / len(validation_table), total_f1 / len(validation_table)]
 			acc_log.to_csv("./acclog.csv")
 
 			#dataset_test_results.sort_values(by=["Trials"], ascending=False)

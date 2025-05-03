@@ -102,8 +102,6 @@ def train(model_path, optimizer_path, first_n_byte, set_size, batch_size, epochs
 	elif mode.lower() == "mallstm":
 		# CNN-LSTM MalConv
 		model = MalLSTM(input_length=first_n_byte, window_size=window_size, stride=stride, embed=embed)
-	elif mode.lower() == "cnn_lstm":
-		model = CNN_LSTM(embed_dim=embed, device=device)
 	elif mode.lower() == "maltf":
 		model = MalTF(input_length=first_n_byte, window_size=window_size, stride=stride, embed=embed)
 	else:
@@ -296,7 +294,7 @@ if __name__ == "__main__":
 
 			acc_log = None
 			try:
-				acc_log = pd.read_csv("./acclog.csv")
+				acc_log = pd.read_csv("./acclog.csv", index_col=0)
 			except:
 				acc_log = pd.DataFrame(columns=["acc", "f1"])
 			acc_log.loc[len(acc_log)] = [total_acc / len(validation_table), total_f1 / len(validation_table)]

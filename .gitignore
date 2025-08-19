@@ -5,6 +5,7 @@
 !*ds_tst*.csv
 !*bak*.csv
 !shapely_ctrl*.csv
+!acclog.csv
 
 #etc
 *.pyc
